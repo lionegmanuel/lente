@@ -9,7 +9,9 @@ Guía completa para dejar andando la cámara del iPhone en OBS, en Windows y en 
 | Windows | **Captura de ventana** de la ventana «Lente» (ffplay) | «Webcam iPhone» en el Escritorio |
 | Linux (cualquier distro) | **Dispositivo de captura de video (V4L2)** en `/dev/video10`, la webcam virtual | «Webcam iPhone» en el menú y el Escritorio |
 
-Estado al 2026-11-15: probado con el iPhone 15 Pro Max de Manuel en Windows 10 (imagen, reconexión al desenchufar y OBS aprobados por Manuel). En Linux, probado de punta a punta en Ubuntu 26.04 con un iPhone simulado (los 180 cuadros llegan idénticos y reconecta solo); falta la primera prueba con el iPhone real en Fedora, que es el paso 6 de la sección Linux.
+Estado al 2026-11-15: probado con el iPhone 15 Pro Max de Manuel en Windows 10 (imagen, reconexión al desenchufar y OBS aprobados por Manuel). En Linux, probado en Ubuntu 26.04 con un iPhone simulado (los 180 cuadros llegan idénticos y reconecta solo) y con un OBS simulado (perfil y escena generados y verificados). Falta lo que solo se puede hacer en la PC: la primera prueba con el iPhone real (paso 6 de la sección Linux) y abrir OBS por primera vez con la escena generada.
+
+**Punto de partida en la PC con Linux de Manuel:** nada armado. Nunca se usó ahí una cámara de celular: no hay webcam virtual ni OBS configurado para cámara. El instalador hace todo desde cero.
 
 ---
 
@@ -64,13 +66,14 @@ Lo que hace falta y para qué:
 |---|---|
 | `usbmuxd` | Habla con el iPhone por el cable (el equivalente del servicio de Apple de Windows) |
 | `libimobiledevice` (herramientas) | Diagnóstico y emparejamiento (`idevice_id -l`, `idevicepair`) |
-| Python 3.8 o superior | Corre `lente_rapido.py` (solo biblioteca estándar, sin pip) |
+| Python 3.8 o superior | Corre `lente_rapido.py` y `configurar_obs.py` (solo biblioteca estándar, sin pip) |
 | FFmpeg **con decodificador H.264** y salida `v4l2` | Decodifica el video y lo escribe en la webcam virtual. En Fedora, el `ffmpeg-free` oficial no trae H.264: se usa el de RPM Fusion |
 | `v4l2loopback` | La webcam virtual `/dev/video10` que lee OBS |
+| OBS Studio | Si no está, el instalador pone el Flatpak de Flathub (si hay Flatpak) o el de la distro |
 
 ### Paso a paso
 
-1. **Cerrar OBS.**
+1. **Cerrar OBS** si está abierto.
 2. **Tener el repositorio.** Si el disco de datos está montado en `/mnt/d` con la misma estructura que en Windows, el repo ya está en `/mnt/d/Documents/MANUEL/DEV/lente` (hacer `git pull` ahí). Si no:
    ```bash
    git clone https://github.com/lionegmanuel/lente.git ~/lente
@@ -85,36 +88,47 @@ Lo que hace falta y para qué:
    bash "$LENTE/tools/linux/instalar.sh"
    ```
    * Instala los paquetes de la tabla. En Fedora agrega RPM Fusion si falta, cambia `ffmpeg-free` por `ffmpeg` solo si el que hay no trae H.264, y en placas AMD suma `mesa-va-drivers-freeworld` para decodificar con la placa.
-   * **Webcam virtual:** si `/dev/video10` ya existe (en la PC con Fedora la dejó el instalador del celular Android, como «Celular Webcam»), la usa tal cual y no toca su configuración. Si no existe, crea `/dev/video10` «Lente iPhone» y la deja cargada en cada arranque. Si hay otra configuración de `v4l2loopback` sin el 10, no la pisa: avisa qué agregar.
+   * **Webcam virtual:** si `/dev/video10` ya existe (por ejemplo, la del instalador del celular Android de VELINEX), la usa tal cual y no toca su configuración. Si no existe, crea `/dev/video10` «Lente iPhone» y la deja cargada en cada arranque. Si hay otra configuración de `v4l2loopback` sin el 10, no la pisa: avisa qué agregar.
    * **Secure Boot:** en Fedora firma el módulo con una llave propia y pide una clave corta; al reiniciar aparece una pantalla azul (MOK): *Enroll MOK* · *Continue* · *Yes* · la clave.
    * Agrega el usuario al grupo `video` y crea los accesos directos **Webcam iPhone** y **Webcam iPhone (sin girar)** en el menú y el Escritorio, más el comando `webcam-iphone`.
+   * **OBS:** lo instala si falta y crea el perfil y la colección de escenas **«Lente iPhone»** y los deja activos (`tools/linux/configurar_obs.py`). No borra ni cambia otros perfiles o escenas. Detalle en «OBS en Linux», abajo.
 5. **Reiniciar o cerrar sesión** si el instalador lo pide al final (grupo `video`, módulo nuevo o llave MOK).
 6. **Prueba de punta a punta**, con el iPhone conectado y Lente abierta:
    ```bash
    bash "$LENTE/tools/linux/verificar.sh"
    ```
    Revisa la instalación, que `usbmuxd` vea el iPhone, manda la cámara a `/dev/video10`, lee un cuadro real de ahí (lo mismo que hace OBS) y guarda la foto en `/mnt/d/Temp/lente/` (o en `/tmp/lente/` si no hay `/mnt/d`). Tiene que terminar en «Todo bien». Sin el iPhone: `verificar.sh --sin-iphone` revisa solo la instalación.
-7. **OBS** (ver abajo).
+7. **Abrir OBS:** tiene que abrir con el perfil y la escena «Lente iPhone» y mostrar la cámara. Si abre con otro, elegir «Lente iPhone» en los menús **Perfil** y **Colección de escenas**.
 
 ### Uso diario
 
 1. Lente abierta en el iPhone y el cable conectado.
 2. Clic en **Webcam iPhone**: aparece el aviso «Cámara del iPhone prendida en /dev/video10». No abre ninguna ventana: la imagen va directo a la webcam virtual.
-3. Abrir OBS.
+3. Abrir OBS (perfil y escena «Lente iPhone»).
 4. Para apagarla: otro clic en **Webcam iPhone** (o `webcam-iphone --apagar`).
 
 Sigue andando aunque se desenchufe el cable o se cierre Lente en el iPhone: al volver, la imagen vuelve sola. Orden recomendado: primero la cámara y después OBS.
 
-**Cuadros por segundo:** el lanzador lee los cuadros del perfil activo de OBS (OBS de la distro o Flatpak) y pide esos mismos al iPhone; si no los encuentra, usa 30. El perfil `VELINEX_PRO` de la PC con Fedora está a 60. Para forzar: `webcam-iphone --fps 30`.
+**Cuadros por segundo:** 30, igual que en la laptop (decisión de Manuel, 2026-11-15). El perfil «Lente iPhone» viene a 30 y el lanzador lee los cuadros del perfil activo de OBS (de la distro o Flatpak) y pide esos mismos al iPhone; si no los encuentra, usa 30. Para forzar otro valor: `webcam-iphone --fps 60`.
 
 Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--ventana` (muestra una ventana «Lente» para mirar sin OBS), `--estado`, `--apagar`. Variables: `LENTE_V4L2` (otro dispositivo), `LENTE_MBPS` (tasa, 24 por defecto). Registro: `~/.cache/lente/webcam_iphone.log`.
 
 ### OBS en Linux
 
-* **En la PC con Fedora de Manuel no hay que crear nada:** la fuente `Webcam Xiaomi` de la colección `VELINEX_PRO` ya lee `/dev/video10` con los filtros, el LUT y la máscara circular. Con el modo rápido prendido, muestra el iPhone. Se le puede cambiar el nombre a «Webcam iPhone».
-* En otra PC: **Fuentes › + › Dispositivo de captura de video (V4L2)** › dispositivo **/dev/video10** (el nombre que se ve es «Celular Webcam» o «Lente iPhone») › resolución 1920x1080. Marcar «Reiniciar al no recibir cuadros» si aparece la opción.
-* **Filtros recomendados para el iPhone** (lo mismo que se dejó en Windows): **Apply LUT** con `Studio_Cinema_HerasHiguera_kitchen.cube` al 90%. Los LUT están en `VELINEX/Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/kitchen/`. El filtro «Color Correction» de la fuente se ajustó para el POCO: apagarlo (ojo cerrado) y ver si hace falta.
-* **Calidad de grabación con placa AMD:** Ajustes › Salida › modo Avanzado › Grabación › codificador **FFmpeg VAAPI H.264** (o «AMD HW H.264 (VA-API)»), control de tasa **CQP**, **QP 18** (el perfil viene en 20). Con NVIDIA: NVENC CQP 18, igual que la laptop.
+El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver a correr solo, con OBS cerrado: `python3 "$LENTE/tools/linux/configurar_obs.py"` (`--simular` muestra qué haría). Sirve para el OBS de la distro y para el Flatpak, y configura los dos si están los dos.
+
+| Qué | Cómo queda |
+|---|---|
+| Perfil y colección | **«Lente iPhone»**, activos al abrir OBS. Los demás perfiles y escenas quedan como estaban |
+| Video | 1920x1080 a 30 cuadros |
+| Escena «iPhone» | Fuente **«Webcam iPhone»**: Dispositivo de captura de video (V4L2) en `/dev/video10`, ajustada a toda la pantalla, sin búfer (menos delay) y con reinicio solo si deja de llegar imagen |
+| Color | Filtro **Apply LUT** con `Studio_Cinema_HerasHiguera_kitchen.cube` al 90%, igual que la laptop. Lo busca en el repo VELINEX (`/mnt/*/Documents/MANUEL/VELINEX/...`, `~/Documents/MANUEL/VELINEX/...` y parecidos) y lo copia a la carpeta de OBS (`luts/`) |
+| Audio | Mic/Aux = el micrófono por defecto del sistema (en la PC principal, el Fifine: dejarlo como entrada por defecto en la configuración de sonido) |
+| Grabación | Placa AMD o Intel: **VA-API H.264, CQP 18**. NVIDIA: **NVENC H.264, CQP 18**. Sin placa: x264 CRF 18. Formato MP4 híbrido (OBS 30.2 o superior; si no, MKV). Carpeta: `/mnt/d/Videos` si existe el disco de datos, si no `~/Videos` |
+
+* **Si dice «LUT: no encontrado»:** el repo VELINEX no está en esa PC. Traerlo (o copiar solo el `.cube` desde `Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/kitchen/`) y correr `python3 "$LENTE/tools/linux/configurar_obs.py" --lut /ruta/Studio_Cinema_HerasHiguera_kitchen.cube`.
+* **Si OBS no puede grabar con la placa AMD:** en Fedora falta H.264 en VA-API (el instalador pone `mesa-va-drivers-freeworld`). Con el OBS Flatpak, cambiar en Ajustes › Salida › Grabación el codificador a «x264» como alternativa y avisar.
+* **Para usar la cámara en otra escena:** agregar una fuente **Dispositivo de captura de video (V4L2)** con el dispositivo `/dev/video10`, o copiar «Webcam iPhone» y pegarla como referencia.
 * OBS Flatpak ve `/dev/video10` sin permisos extra.
 
 ### Si algo falla
@@ -127,7 +141,8 @@ Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--
 | «No existe /dev/video10» | Reiniciar después de instalar. Si sigue: `sudo modprobe v4l2loopback`. «Key was rejected by service» = Secure Boot: volver a correr `instalar.sh` y aceptar la llave en la pantalla MOK al reiniciar. «not found» = falta el módulo para ese kernel: en Fedora `sudo akmods --force` y reiniciar; en apt/pacman, reinstalar `v4l2loopback-dkms` con los headers del kernel. |
 | «Sin permiso en /dev/video10» | Falta cerrar sesión después de instalar (grupo `video`). |
 | FFmpeg sin H.264 | Fedora: `sudo dnf install --allowerasing ffmpeg` (RPM Fusion). openSUSE: FFmpeg de Packman. |
-| OBS no muestra la cámara | Prender primero la cámara y después abrir OBS. Con OBS abierto: doble clic en la fuente y Aceptar (la reabre). |
+| OBS no muestra la cámara | Prender primero la cámara y después abrir OBS. Con OBS abierto: doble clic en la fuente «Webcam iPhone» y Aceptar (la reabre). Revisar que el perfil y la escena sean «Lente iPhone». |
+| OBS abre con otra escena | Menús **Perfil** y **Colección de escenas** › «Lente iPhone». Si no aparecen: `python3 "$LENTE/tools/linux/configurar_obs.py"` con OBS cerrado. |
 | La imagen sale dada vuelta | Usar el otro acceso directo («sin girar» o el normal). |
 | Imagen congelada | `webcam-iphone --apagar` y prender de nuevo. Ver `~/.cache/lente/webcam_iphone.log`. |
 | Lente no abre en el iPhone | Pasaron 7 días: renovar en SideStore (sección 1). |
@@ -136,8 +151,8 @@ Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--
 
 ## 4. Para el agente del equipo
 
-* **Archivos:** `tools/lente_rapido.py` (el puente, Windows y Linux), `tools/usbmux_probe.py` (diagnóstico de usbmux: `--listar`, `--conectar 27183 --lnte "camera_fps=30" --demux` valida el formato y mide cuadros por segundo y tasa), `tools/linux/instalar.sh`, `tools/linux/webcam_iphone.sh`, `tools/linux/verificar.sh`, `tools/windows/instalar.ps1`.
+* **Archivos:** `tools/lente_rapido.py` (el puente, Windows y Linux), `tools/linux/configurar_obs.py` (OBS en Linux), `tools/usbmux_probe.py` (diagnóstico de usbmux: `--listar`, `--conectar 27183 --lnte "camera_fps=30" --demux` valida el formato y mide cuadros por segundo y tasa), `tools/linux/instalar.sh`, `tools/linux/webcam_iphone.sh`, `tools/linux/verificar.sh`, `tools/windows/instalar.ps1`.
 * **Cómo funciona:** `lente_rapido.py` abre una sesión con la app del iPhone por usbmux (puerto 27183 del iPhone), recibe H.264 con el formato de scrcpy 4.1 y le pasa el video a ffplay (ventana, Windows) o a ffmpeg (`-f v4l2 /dev/video10`, Linux). Protocolo en `docs/plan/ARQUITECTURA_Y_PROTOCOLO.md`.
 * **Diagnóstico rápido en Linux:** `python3 tools/usbmux_probe.py --listar` (tiene que mostrar el iPhone por USB), `webcam-iphone --estado`, `tail -f ~/.cache/lente/webcam_iphone.log`, `bash tools/linux/verificar.sh`.
-* **Reglas:** el Apple ID, contraseñas y códigos los escribe solo Manuel. No tocar la configuración de `v4l2loopback` del celular Android si ya existe (el instalador no la toca). Detener procesos solo por PID (el lanzador guarda el suyo en `$XDG_RUNTIME_DIR/lente-webcam-iphone.pid`). Nada de archivos temporales en el disco del sistema de Windows. No avanzar fases de Lente sin que Manuel lo pida.
+* **Reglas:** el Apple ID, contraseñas y códigos los escribe solo Manuel. Si ya existe una configuración de `v4l2loopback`, no pisarla (el instalador no la toca). En OBS, no borrar perfiles ni escenas de Manuel: lo de Lente vive en «Lente iPhone». Detener procesos solo por PID (el lanzador guarda el suyo en `$XDG_RUNTIME_DIR/lente-webcam-iphone.pid`). Nada de archivos temporales en el disco del sistema de Windows. No avanzar fases de Lente sin que Manuel lo pida.
 * **Al terminar:** anotar el resultado en `docs/plan/ESTADO.md` (una línea con fecha: distro, qué se instaló, salida de `verificar.sh`) y hacer commit.

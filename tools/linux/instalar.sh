@@ -3,6 +3,7 @@
 #
 #   bash tools/linux/instalar.sh             instala (pide la clave de sudo cuando hace falta)
 #   bash tools/linux/instalar.sh --simular   muestra lo que haria, sin tocar el sistema
+#   bash tools/linux/instalar.sh --sin-obs   no instala ni configura OBS
 #
 # Deja lista la camara del iPhone por cable para OBS:
 #   1. usbmuxd (habla con el iPhone por USB), herramientas de libimobiledevice, Python 3,
@@ -12,6 +13,9 @@
 #   3. Usuario en el grupo video.
 #   4. Accesos directos "Webcam iPhone" y "Webcam iPhone (sin girar)" en el menu y el Escritorio,
 #      y el comando webcam-iphone.
+#   5. OBS Studio (si falta, el Flatpak de Flathub) con el perfil y la escena "Lente iPhone":
+#      1080p a 30 cuadros, la camara en /dev/video10 con el LUT, el microfono del sistema y la
+#      grabacion con la placa en CQP 18 (configurar_obs.py). No toca otros perfiles ni escenas.
 # Se puede volver a correr: no duplica nada.
 
 set -euo pipefail
@@ -22,7 +26,14 @@ NR=10
 DISPOSITIVO="/dev/video${NR}"
 USUARIO="${USER:-$(id -un)}"
 SIMULAR=false
-[[ "${1:-}" == "--simular" ]] && SIMULAR=true
+CON_OBS=true
+for arg in "$@"; do
+    case "$arg" in
+        --simular) SIMULAR=true ;;
+        --sin-obs) CON_OBS=false ;;
+        *) echo "Opcion desconocida: $arg"; exit 1 ;;
+    esac
+done
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; GRIS='\033[0;90m'; NC='\033[0m'
 paso() { echo ""; echo -e "${YELLOW}[*] $1${NC}"; }
@@ -35,6 +46,11 @@ s() {
 escribir() {
     if $SIMULAR; then echo -e "      ${GRIS}[simulado] escribir $1:${NC}"; sed 's/^/        /'; return 0; fi
     sudo tee "$1" >/dev/null
+}
+# Lo que corre con el usuario (sin sudo) pero cambia algo: en --simular solo se muestra
+u() {
+    if $SIMULAR; then echo -e "      ${GRIS}[simulado] $*${NC}"; return 0; fi
+    "$@"
 }
 tiene() { command -v "$1" >/dev/null 2>&1; }
 ffmpeg_listo() {
@@ -193,6 +209,38 @@ crear_lanzador "lente-webcam-iphone-sin-girar.desktop" "Webcam iPhone (sin girar
 tiene update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 ok "Menu y Escritorio: 'Webcam iPhone' y 'Webcam iPhone (sin girar)'. En terminal: webcam-iphone"
 
+# 5. OBS
+if $CON_OBS; then
+    paso "OBS Studio"
+    if (tiene flatpak && flatpak info com.obsproject.Studio >/dev/null 2>&1) || tiene obs; then
+        ok "OBS ya esta instalado"
+    elif tiene flatpak; then
+        # Flathub: el mismo OBS en cualquier distro, con todos los codecs
+        u flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+        u flatpak install --user -y --noninteractive flathub com.obsproject.Studio
+        ok "OBS instalado (Flatpak de Flathub)"
+    elif tiene dnf; then
+        s dnf install -y obs-studio obs-studio-plugin-x264 || s dnf install -y obs-studio
+    elif tiene apt-get; then
+        s apt-get install -y obs-studio
+    elif tiene pacman; then
+        s pacman -S --needed --noconfirm obs-studio
+    elif tiene zypper; then
+        s zypper --non-interactive install obs-studio
+    else
+        aviso "Instalar OBS Studio a mano (obsproject.com) y volver a correr este script."
+    fi
+
+    paso "OBS: perfil y escena 'Lente iPhone'"
+    if $SIMULAR; then
+        python3 "${AQUI}/configurar_obs.py" --simular || aviso "No se pudo simular la configuracion de OBS."
+    elif pgrep -x obs >/dev/null 2>&1; then
+        aviso "OBS esta abierto: cerrarlo y correr: python3 \"${AQUI}/configurar_obs.py\""
+    else
+        python3 "${AQUI}/configurar_obs.py" || aviso "OBS sin configurar: ver el mensaje de arriba y docs/MODO_RAPIDO.md."
+    fi
+fi
+
 echo ""
 echo -e "${CYAN}=================================================================${NC}"
 echo -e "${GREEN}   Instalacion completa${NC}"
@@ -205,4 +253,4 @@ elif $REINICIAR_SESION; then
     echo "Cerrar sesion y volver a entrar una vez (grupo video)."
 fi
 echo "Prueba de punta a punta (iPhone conectado y Lente abierta): bash \"${AQUI}/verificar.sh\""
-echo "Uso diario: abrir Lente en el iPhone, conectar el cable, clic en 'Webcam iPhone', abrir OBS."
+echo "Uso diario: abrir Lente en el iPhone, conectar el cable, clic en 'Webcam iPhone' y abrir OBS (perfil y escena 'Lente iPhone')."
