@@ -23,10 +23,10 @@
 
 | # | Fecha | Decisión | Por qué | Quién |
 |---|---|---|---|---|
-| D1 | 2026-11-15 | Firma gratis con SideStore; cuenta paga solo para lanzar | Restricción de costo cero de Manuel | Propuesta, **confirmar Manuel** |
-| D2 | 2026-11-15 | Repositorio público, Apache 2.0 | Minutos ilimitados de macOS en CI, confianza para lanzar, licencia heredada de scrcpy | Propuesta, **confirmar Manuel antes de publicar** |
-| D3 | 2026-11-15 | Nombre provisional «Lente» | Hace falta un nombre para empezar; no puede ser «scrcpy» | **Pendiente Manuel** |
-| D4 | 2026-11-15 | iOS mínimo 16.0 | Cubre el iPhone 15 Pro Max y la mayoría de los iPhone con soporte; Modo desarrollador desde iOS 16 | Fase 0 confirma |
+| D1 | 2026-11-15 | Firma gratis con SideStore y un Apple ID gratis aparte, solo para firmar; Sideloadly de plan B; cuenta paga solo para lanzar | Costo cero; la cuenta principal de Manuel no se expone. SideStore funciona en iOS 26 (la renovación se rompió en 26.4 y se arregló en abril de 2026) | Manuel |
+| D2 | 2026-11-15 | Repositorio público, Apache 2.0 | Minutos ilimitados de macOS en CI, confianza para lanzar, licencia heredada de scrcpy | Manuel |
+| D3 | 2026-11-15 | Nombre definitivo «Lente» | Corto, se entiende en español, italiano y portugués, y en inglés suena a «lens»; libre en GitHub | Manuel |
+| D4 | 2026-11-15 | iOS mínimo 16.0; el iPhone de Manuel tiene iOS 26 | Cubre a la mayoría de los iPhone con soporte; Modo desarrollador desde iOS 16 | Manuel |
 | D5 | 2026-11-15 | Fork de scrcpy 4.1 con backend iOS | Réplica exacta de la experiencia, Android incluido, menos trabajo que un cliente propio, más robusto que un adb falso | Manuel aprobó el enfoque |
 | D6 | 2026-11-15 | Puerto 27183 solo en loopback | Mismo puerto que scrcpy; nada expuesto a la red | Arquitecto |
 | D7 | 2026-11-15 | Sin audio del iPhone en v1 | Manuel: el micrófono va siempre aparte (BY-V por USB) | Manuel |

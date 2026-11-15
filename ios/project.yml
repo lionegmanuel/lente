@@ -1,0 +1,59 @@
+# XcodeGen: genera ios/Lente.xcodeproj (no se versiona el .xcodeproj).
+# Bundle ID fijo desde la Fase 0: con Apple ID gratis no conviene cambiarlo.
+name: Lente
+options:
+  bundleIdPrefix: digital.velinex
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.9"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    TARGETED_DEVICE_FAMILY: "1"
+    DEAD_CODE_STRIPPING: YES
+    STRIP_INSTALLED_PRODUCT: YES
+    SWIFT_COMPILATION_MODE: wholemodule
+targets:
+  Lente:
+    type: application
+    platform: iOS
+    sources:
+      - path: Lente
+    info:
+      path: Lente/Info.plist
+      properties:
+        CFBundleDisplayName: Lente
+        NSCameraUsageDescription: "Lente usa la cámara para mandar el video a tu computadora por el cable."
+        UIRequiresFullScreen: true
+        UIStatusBarHidden: true
+        UIViewControllerBasedStatusBarAppearance: false
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: digital.velinex.lente
+        GENERATE_INFOPLIST_FILE: NO
+  LenteTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: LenteTests
+    dependencies:
+      - target: Lente
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+schemes:
+  Lente:
+    build:
+      targets:
+        Lente: all
+        LenteTests: [test]
+    test:
+      targets:
+        - LenteTests

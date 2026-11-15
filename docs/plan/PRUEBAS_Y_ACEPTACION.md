@@ -46,7 +46,7 @@ Cada prueba guiada se le pasa a Manuel como una lista corta, en su idioma, con q
 
 ### Fase 0
 
-1. Instalar Apple Devices desde Microsoft Store (laptop). Conectar el iPhone y tocar «Confiar» si lo pide.
+1. Instalar iTunes descargado directo de Apple (laptop), que trae Apple Mobile Device Service; Apple Devices queda de alternativa. Conectar el iPhone y tocar «Confiar» si lo pide.
 2. Seguir la guía de SideStore de `BUILD_FIRMA_DISTRIBUCION.md` §3 (Manuel escribe su Apple ID; el equipo nunca).
 3. Instalar la app mínima desde la fuente de prueba. Abrirla. Contestar: ¿abrió? ¿pidió permiso de cámara?
 4. Con la app mínima abierta, el equipo corre `usbmux_probe.py --conectar 27183`. Contestar: ¿el iPhone mostró algún aviso?
