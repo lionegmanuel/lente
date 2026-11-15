@@ -10,7 +10,7 @@
 #include "server.h"
 
 #ifndef LENTE_VERSION
-# define LENTE_VERSION "1.0.0"
+# define LENTE_VERSION "1.0.1"
 #endif
 
 // Lente session opening (LNTE) and control opening (LNTC).

@@ -80,7 +80,7 @@ rm -f "$W/scrcpy-noconsole.vbs"
 cp "$ART/scrcpy-server/scrcpy-server" "$W/"
 notice "$W"
 leeme windows "$W/LEEME.txt"
-argumentos='--ios --window-title=Lente --camera-fps=30 --video-bit-rate=24M --ios-reconnect=3600'
+argumentos='--ios --window-title=Lente --camera-fps=30 --video-bit-rate=24M --ios-reconnect=3600 --pause-on-exit=false'
 # Sin consola, igual que scrcpy-noconsole.vbs de scrcpy: la ventana de video se ve igual.
 # Explorer y los accesos directos arrancan en la carpeta del .vbs.
 printf 'CreateObject("Wscript.Shell").Run "cmd /c lente.exe %s --capture-orientation=180", 0, false\r\n' \

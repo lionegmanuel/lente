@@ -26,7 +26,8 @@ function Registrar($texto) {
 }
 
 if ($lente -and -not $Rapido) {
-    $argumentos = @('--ios', '--window-title=Lente', "--camera-fps=$Fps", "--video-bit-rate=${Mbps}M", '--ios-reconnect=3600')
+    $argumentos = @('--ios', '--window-title=Lente', "--camera-fps=$Fps", "--video-bit-rate=${Mbps}M",
+                    '--ios-reconnect=3600', '--pause-on-exit=false')
     if (-not $SinGirar) { $argumentos += '--capture-orientation=180' }
     Registrar ("Lente para la PC: {0} {1}" -f $lente.FullName, ($argumentos -join ' '))
     # Por cmd oculto, como scrcpy-noconsole.vbs: la consola no se ve y la ventana de video si
@@ -34,7 +35,13 @@ if ($lente -and -not $Rapido) {
     $linea = '/c ""{0}" {1} > "{2}" 2>&1"' -f $lente.FullName, ($argumentos -join ' '), $salida
     $p = Start-Process -FilePath 'cmd.exe' -ArgumentList $linea -WorkingDirectory $lente.DirectoryName `
         -WindowStyle Hidden -PassThru
-    Start-Sleep -Seconds 6
+    # Hasta 20 s: si la sesion arranca, listo; si lente.exe se cierra (sin iPhone, app vieja), modo rapido.
+    # Si sigue abierto esperando que se abra la app en el iPhone, se queda (reconecta solo).
+    for ($i = 0; $i -lt 20; $i++) {
+        Start-Sleep -Seconds 1
+        if ($p.HasExited) { break }
+        if ((Test-Path $salida) -and (Select-String -Path $salida -Pattern 'App del iPhone:' -Quiet)) { exit 0 }
+    }
     if (-not $p.HasExited) {
         exit 0
     }
