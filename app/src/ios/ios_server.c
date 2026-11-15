@@ -219,6 +219,19 @@ open_session(struct sc_server *server, uint32_t device_id, uint16_t port,
         net_close(video);
         return false;
     }
+    // The app 0.3.0 or later answers "ok lente/X.Y.Z". Before, it ignored
+    // the rotation: fail early instead of showing the image upside down.
+    if (strncmp(message, "ok lente/", 9)
+            && server->params.capture_orientation != SC_ORIENTATION_0) {
+        LOGE("La app Lente del iPhone es vieja y no rota la imagen: actualizala "
+             "(the iPhone app is too old for --capture-orientation)");
+        net_close(video);
+        return false;
+    }
+    if (!quiet) {
+        LOGI("App del iPhone: %s", strncmp(message, "ok lente/", 9)
+                                   ? "anterior a 0.3.0" : message + 3);
+    }
 
     // Same as Android: the first socket carries the device name, then the
     // codec meta

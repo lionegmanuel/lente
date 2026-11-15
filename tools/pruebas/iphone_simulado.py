@@ -115,7 +115,8 @@ class Simulador:
                 return
             self.sesiones += 1
             log(f"sesion {self.sesiones}: LNTE v{version}: {params.strip().replace(chr(10), ' ')}")
-            s.sendall(b"LNTE" + struct.pack(">HBQH", 1, 0, SESION, 2) + b"ok")
+            respuesta = b"ok lente/1.0.0"
+            s.sendall(b"LNTE" + struct.pack(">HBQH", 1, 0, SESION, len(respuesta)) + respuesta)
             s.sendall(b"iPhone simulado".ljust(64, b"\0") + b"h264")
             s.sendall(bytes([0x80, 0, 0, 0]) + struct.pack(">II", 1920, 1080))
             s.sendall(struct.pack(">QI", 1 << 62, len(self.config)) + self.config)

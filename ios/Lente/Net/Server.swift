@@ -195,7 +195,7 @@ final class StreamServer: ObservableObject {
 
         var opening = Data()
         if !params.rawStream {
-            opening.append(LNTE.response(status: .ok, session: sessionId, message: "ok"))
+            opening.append(LNTE.response(status: .ok, session: sessionId, message: "ok lente/\(DeviceInfo.appVersion)"))
             if params.sendDeviceMeta { opening.append(ScrcpyPacket.deviceMeta(name: DeviceInfo.modelName)) }
             if params.sendStreamMeta { opening.append(ScrcpyPacket.streamMeta(codec: params.codec)) }
             if params.sendFrameMeta { opening.append(ScrcpyPacket.session(width: size.width, height: size.height)) }
@@ -523,6 +523,10 @@ final class StreamServer: ObservableObject {
 }
 
 enum DeviceInfo {
+    /// App version, sent in the LNTE answer: the PC checks what the app supports
+    static let appVersion: String =
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0"
+
     /// Model name for the scrcpy device meta. Never the personal device name.
     static let modelName: String = {
         var info = utsname()
