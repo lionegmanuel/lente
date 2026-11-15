@@ -1,5 +1,6 @@
 import AVFoundation
 import SwiftUI
+import UIKit
 
 /// Camera permission state.
 final class CameraPermission: ObservableObject {
@@ -19,6 +20,7 @@ final class CameraPermission: ObservableObject {
 struct MainView: View {
     @EnvironmentObject private var server: StreamServer
     @EnvironmentObject private var camera: CameraPermission
+    @State private var savedBrightness: CGFloat = 0.5
 
     var body: some View {
         ZStack {
@@ -36,12 +38,34 @@ struct MainView: View {
                     Button("Permitir la cámara") { camera.request() }
                         .buttonStyle(.borderedProminent)
                 }
+                if case .streaming = server.state {
+                    Button("Pantalla negra") { server.blackout = true }
+                        .buttonStyle(.bordered)
+                }
                 Text("Conectá el cable y abrí Lente en la computadora")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
             .foregroundStyle(.white)
             .padding(32)
+
+            if server.blackout {
+                // Black screen with the minimum brightness: less heat and battery.
+                // Double tap (or MOD+Shift+o on the PC) brings the screen back.
+                Color.black
+                    .ignoresSafeArea()
+                    .contentShape(Rectangle())
+                    .onTapGesture(count: 2) { server.blackout = false }
+            }
+        }
+        .statusBarHidden(true)
+        .onChange(of: server.blackout) { on in
+            if on {
+                savedBrightness = UIScreen.main.brightness
+                UIScreen.main.brightness = 0
+            } else {
+                UIScreen.main.brightness = savedBrightness
+            }
         }
         .onAppear {
             server.start()
@@ -55,6 +79,7 @@ struct MainView: View {
         case .waiting: return "Esperando la computadora"
         case .configuring: return "Preparando la cámara"
         case .streaming(let detail): return "Transmitiendo\n\(detail)\n\(server.framesSent) cuadros"
+        case .interrupted: return "Cámara interrumpida\nVuelve sola al terminar la llamada o al cerrar el Centro de control"
         case .failed(let detail): return "Error: \(detail)"
         }
     }
