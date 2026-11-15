@@ -2,6 +2,8 @@
 
 Guía completa para dejar andando la cámara del iPhone en OBS, en Windows y en cualquier Linux. Sirve para Manuel y para cualquier agente del equipo: tiene los pasos exactos, cómo comprobar cada uno y qué hacer si algo falla.
 
+**Desde la versión 1.0 (2026-11-15):** los accesos directos «Webcam iPhone» usan **Lente para la PC** (el cliente completo, basado en scrcpy: reconexión sola, atajos de cámara y telemetría en el título) y, si no arranca, pasan solos al modo rápido de esta guía. Los instaladores (`tools/windows/instalar.ps1`, `tools/linux/instalar.sh`) bajan Lente para la PC del último release y verifican su SHA256. Atajos con el iPhone (Alt + tecla): O pantalla negra y Shift+O volver, T y Shift+T linterna, Arriba y Abajo zoom, L lente siguiente y Shift+L frontal, E exposición, A foco, Y balance de blancos, Shift+R reiniciar el video. Opciones: `lente --help`. El modo rápido queda como respaldo: «Webcam iPhone (modo rápido)» en Windows y `webcam-iphone --rapido` en Linux.
+
 **Qué es el modo rápido:** un puente para grabar ya, mientras se termina Lente para la PC (la Fase 2 del plan). La app del iPhone es la definitiva; en la PC, en lugar del cliente basado en scrcpy, corre `tools/lente_rapido.py`, que recibe el video por el cable y lo entrega con FFmpeg:
 
 | Sistema | Cómo lo toma OBS | Acceso directo |

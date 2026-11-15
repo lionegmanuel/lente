@@ -1,3 +1,14 @@
+# Lente: el iPhone como cámara de la PC por cable
+
+**Lente** es un fork de scrcpy 4.1 que suma un backend para iPhone: la app Lente (iOS 16 o superior) manda la cámara por el cable USB y `lente` la muestra en una ventana, la escribe en una webcam virtual de Linux (V4L2) o la graba, en Windows y en cualquier Linux. Gratis y de código abierto (Apache 2.0). Android sigue funcionando igual que en scrcpy.
+
+* Descargas: [releases](https://github.com/lionegmanuel/lente/releases) (`Lente-PC-windows-x64.zip`, `Lente-PC-linux-x86_64.tar.gz`, `Lente-vX.Y.Z.ipa`).
+* Guía de uso (español): [docs/MODO_RAPIDO.md](docs/MODO_RAPIDO.md). Mantenimiento del iPhone: [docs/MANTENIMIENTO_IPHONE_Y_PC.md](docs/MANTENIMIENTO_IPHONE_Y_PC.md).
+* Plan técnico y estado: [docs/plan/](docs/plan/).
+* Uso rápido: `lente --ios` (con la app Lente abierta y el iPhone por cable). Linux: `lente --ios --v4l2-sink=/dev/video10 --no-playback --no-window`.
+
+Lo que sigue es el README original de scrcpy.
+
 > [!WARNING]
 > **This GitHub repo (<https://github.com/Genymobile/scrcpy>) is the only official
 source for the project. Do not download releases from random websites, even if
