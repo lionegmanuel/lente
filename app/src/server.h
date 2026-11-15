@@ -77,6 +77,14 @@ struct sc_server_params {
     bool flex_display;
     bool ignore_video_encoder_constraints;
     uint8_t list;
+    // Lente: iPhone backend
+    bool ios;
+    const char *ios_udid;
+    uint16_t ios_port;
+    uint16_t ios_reconnect;
+    bool camera_stabilization;
+    const char *camera_lock;
+    const char *keyframe_interval;
 };
 
 struct sc_server {

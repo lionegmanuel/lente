@@ -26,6 +26,7 @@
 #include "screen.h"
 #include "sdl_hints.h"
 #include "server.h"
+#include "ios/ios_server.h"
 #include "uhid/gamepad_uhid.h"
 #include "uhid/keyboard_uhid.h"
 #include "uhid/mouse_uhid.h"
@@ -327,6 +328,11 @@ scrcpy(struct scrcpy_options *options) {
     struct scrcpy *s = &scrcpy;
 
     // Minimal SDL initialization
+    if (options->list_ios_devices) {
+        return sc_ios_list_devices() ? SCRCPY_EXIT_SUCCESS
+                                     : SCRCPY_EXIT_FAILURE;
+    }
+
     if (!SDL_Init(SDL_INIT_EVENTS)) {
         LOGE("Could not initialize SDL: %s", SDL_GetError());
         return SCRCPY_EXIT_FAILURE;
@@ -403,6 +409,13 @@ scrcpy(struct scrcpy_options *options) {
         .camera_size = options->camera_size,
         .camera_ar = options->camera_ar,
         .camera_fps = options->camera_fps,
+        .ios = options->ios,
+        .ios_udid = options->ios_udid,
+        .ios_port = options->ios_port,
+        .ios_reconnect = options->ios_reconnect,
+        .camera_stabilization = options->camera_stabilization,
+        .camera_lock = options->camera_lock,
+        .keyframe_interval = options->keyframe_interval,
         .force_adb_forward = options->force_adb_forward,
         .power_off_on_close = options->power_off_on_close,
         .clipboard_autosync = options->clipboard_autosync,
@@ -520,7 +533,8 @@ scrcpy(struct scrcpy_options *options) {
 
     struct sc_file_pusher *fp = NULL;
 
-    if (options->window && options->control) {
+    // Lente: no file push to an iPhone (it uses adb)
+    if (options->window && options->control && !options->ios) {
         if (!sc_file_pusher_init(&s->file_pusher, &s->controller, serial,
                                  options->push_target)) {
             goto end;

@@ -1,0 +1,163 @@
+# Lente para la PC (fork de scrcpy 4.1 con el backend del iPhone): pruebas,
+# prueba de punta a punta con un iPhone simulado y compilacion para Windows y Linux.
+name: Lente PC
+
+on:
+  push:
+    paths:
+      - "app/**"
+      - "server/**"
+      - "release/**"
+      - "tools/pruebas/**"
+      - "meson.build"
+      - "meson_options.txt"
+      - "cross_*.txt"
+      - ".github/workflows/lente-pc.yml"
+  pull_request:
+    paths: ["app/**", "server/**", "release/**"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+env:
+  APT_DEPS: >-
+    meson ninja-build nasm ffmpeg libavcodec-dev libavdevice-dev libavformat-dev
+    libavutil-dev libswresample-dev libusb-1.0-0 libusb-1.0-0-dev libv4l-dev
+    libasound2-dev libpulse-dev libaudio-dev libfribidi-dev libjack-dev libsndio-dev
+    libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxfixes-dev libxi-dev libxss-dev
+    libxtst-dev libxkbcommon-dev libdrm-dev libgbm-dev libgl1-mesa-dev libgles2-mesa-dev
+    libegl1-mesa-dev libdbus-1-dev libibus-1.0-dev libudev-dev libthai-dev
+    libpipewire-0.3-dev libwayland-dev libdecor-0-dev liburing-dev
+
+jobs:
+  pruebas:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $APT_DEPS
+
+      - name: Cache de SDL3
+        uses: actions/cache@v4
+        with:
+          path: app/deps/work
+          key: sdl3-linux-${{ hashFiles('app/deps/sdl.sh', 'app/deps/common') }}
+
+      - name: SDL3
+        run: app/deps/sdl.sh linux native shared
+
+      - name: Pruebas unitarias (scrcpy y Lente, con ASan y UBSan)
+        run: |
+          export PKG_CONFIG_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib/pkgconfig
+          export LD_LIBRARY_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib
+          release/test_client.sh
+
+      - name: Compilar para la prueba de punta a punta
+        run: |
+          export PKG_CONFIG_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib/pkgconfig
+          meson setup build-e2e -Dcompile_server=false
+          ninja -C build-e2e
+
+      - name: Prueba de punta a punta con un iPhone simulado
+        run: |
+          export LD_LIBRARY_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib
+          export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
+          export USBMUXD_SOCKET_ADDRESS=127.0.0.1:27999
+          ffmpeg -hide_banner -loglevel error -f lavfi -i testsrc2=size=1920x1080:rate=30 -t 5 \
+              -pix_fmt yuv420p -c:v libx264 -profile:v high -bf 0 -g 60 -f h264 prueba.h264
+          python3 tools/pruebas/iphone_simulado.py --puerto 27999 --video prueba.h264 2> iphone.log &
+          sleep 1
+          echo "== --list-ios-devices"
+          ./build-e2e/app/scrcpy --list-ios-devices 2>&1 | tee lista.log
+          grep -q "SIMULADO-0000-LENTE" lista.log
+          echo "== sesion de 4 segundos grabando a un archivo"
+          ./build-e2e/app/scrcpy --ios --no-window --record=salida.mkv --time-limit=4 \
+              --camera-fps=30 --video-bit-rate=24M --capture-orientation=180 2>&1 | tee lente.log
+          cat iphone.log
+          grep -q "capture_orientation=180" iphone.log
+          grep -q "camera_fps=30" iphone.log
+          grep -q "control abierto, sesion OK" iphone.log
+          cuadros=$(ffprobe -v error -count_frames -select_streams v:0 \
+              -show_entries stream=nb_read_frames -of csv=p=0 salida.mkv)
+          tam=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x salida.mkv)
+          echo "Cuadros grabados: $cuadros ($tam)" | tee -a "$GITHUB_STEP_SUMMARY"
+          test "$tam" = "1920x1080"
+          test "$cuadros" -ge 60
+
+      - name: Android sigue igual (sin iPhone, el camino de adb no cambia)
+        run: |
+          export LD_LIBRARY_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib
+          ./build-e2e/app/scrcpy --version
+          # Sin dispositivo Android, tiene que fallar buscando adb, no el iPhone
+          ./build-e2e/app/scrcpy --no-window 2>&1 | tee android.log || true
+          grep -qi "adb\|device" android.log
+
+  servidor-android:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      GRADLE: gradle
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: zulu
+          java-version: "17"
+      - name: Servidor de scrcpy para Android
+        run: release/build_server.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: scrcpy-server
+          path: release/work/build-server/server/scrcpy-server
+
+  windows:
+    needs: pruebas
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build nasm mingw-w64 mingw-w64-tools libz-mingw-w64-dev
+      - name: Cache de dependencias de Windows
+        uses: actions/cache@v4
+        with:
+          path: app/deps/work
+          key: deps-win64-${{ hashFiles('app/deps/*') }}
+      - name: Compilar (MinGW, igual que los releases de scrcpy)
+        run: release/build_windows.sh 64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lente-pc-win64-dist
+          path: release/work/build-win64/dist/
+
+  linux:
+    needs: pruebas
+    runs-on: ubuntu-22.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - name: Dependencias
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y $APT_DEPS
+      - name: Cache de dependencias de Linux
+        uses: actions/cache@v4
+        with:
+          path: app/deps/work
+          key: deps-linux-x86_64-${{ hashFiles('app/deps/*') }}
+      - name: Compilar (portable, con V4L2, igual que los releases de scrcpy)
+        run: release/build_linux.sh x86_64
+      - name: Tar (conserva los permisos)
+        run: tar -C release/work/build-linux-x86_64 -czf lente-pc-linux-dist.tar.gz dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: lente-pc-linux-x86_64-dist
+          path: lente-pc-linux-dist.tar.gz

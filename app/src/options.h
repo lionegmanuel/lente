@@ -296,6 +296,15 @@ struct scrcpy_options {
 #endif
 #ifdef HAVE_USB
     bool otg;
+    // Lente: iPhone backend
+    bool ios;
+    bool list_ios_devices;
+    const char *ios_udid;
+    uint16_t ios_port;
+    uint16_t ios_reconnect;
+    bool camera_stabilization;
+    const char *camera_lock;
+    const char *keyframe_interval;
 #endif
     bool show_touches;
     bool fullscreen;

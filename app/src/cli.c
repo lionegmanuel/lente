@@ -111,6 +111,14 @@ enum {
     OPT_RENDER_FIT,
     OPT_IGNORE_VIDEO_ENCODER_CONSTRAINTS,
     OPT_NO_TERMINAL_TITLE,
+    OPT_IOS,
+    OPT_IOS_UDID,
+    OPT_LIST_IOS_DEVICES,
+    OPT_IOS_PORT,
+    OPT_IOS_RECONNECT,
+    OPT_CAMERA_LOCK,
+    OPT_CAMERA_STABILIZATION,
+    OPT_KEYFRAME_INTERVAL,
 };
 
 struct sc_option {
@@ -667,6 +675,58 @@ static const struct sc_option options[] = {
         .longopt_id = OPT_NO_POWER_ON,
         .longopt = "no-power-on",
         .text = "Do not power on the device on start.",
+    },
+    {
+        .longopt_id = OPT_IOS,
+        .longopt = "ios",
+        .text = "Use an iPhone connected by cable, with the Lente app open "
+                "(iOS backend). The video source is the camera, without "
+                "audio.",
+    },
+    {
+        .longopt_id = OPT_IOS_UDID,
+        .longopt = "ios-udid",
+        .argdesc = "udid",
+        .text = "Select the iPhone by UDID (implies --ios). List them with "
+                "--list-ios-devices.",
+    },
+    {
+        .longopt_id = OPT_LIST_IOS_DEVICES,
+        .longopt = "list-ios-devices",
+        .text = "List the iPhones connected by cable.",
+    },
+    {
+        .longopt_id = OPT_IOS_PORT,
+        .longopt = "ios-port",
+        .argdesc = "port",
+        .text = "Port of the Lente app on the iPhone.\n"
+                "Default is 27183.",
+    },
+    {
+        .longopt_id = OPT_IOS_RECONNECT,
+        .longopt = "ios-reconnect",
+        .argdesc = "seconds",
+        .text = "Seconds to wait for the Lente app on the iPhone (on start "
+                "and after a disconnection). 0 disables waiting.\n"
+                "Default is 30.",
+    },
+    {
+        .longopt_id = OPT_CAMERA_LOCK,
+        .longopt = "camera-lock",
+        .argdesc = "exposure,focus,wb",
+        .text = "iPhone: lock exposure, focus and/or white balance on start.",
+    },
+    {
+        .longopt_id = OPT_CAMERA_STABILIZATION,
+        .longopt = "camera-stabilization",
+        .text = "iPhone: enable video stabilization (adds latency).",
+    },
+    {
+        .longopt_id = OPT_KEYFRAME_INTERVAL,
+        .longopt = "keyframe-interval",
+        .argdesc = "seconds",
+        .text = "iPhone: key frame interval.\n"
+                "Default is 2.",
     },
     {
         .longopt_id = OPT_NO_TERMINAL_TITLE,
@@ -2174,6 +2234,28 @@ parse_camera_facing(const char *optarg, enum sc_camera_facing *facing) {
 }
 
 static bool
+parse_camera_lock(const char *s) {
+    // Comma separated list of exposure, focus and wb
+    const char *p = s;
+    while (*p) {
+        const char *comma = strchr(p, ',');
+        size_t n = comma ? (size_t) (comma - p) : strlen(p);
+        if (!((n == 8 && !strncmp(p, "exposure", 8))
+                || (n == 5 && !strncmp(p, "focus", 5))
+                || (n == 2 && !strncmp(p, "wb", 2)))) {
+            LOGE("Invalid --camera-lock value: %s (use exposure, focus, wb)",
+                 s);
+            return false;
+        }
+        p += n;
+        if (*p == ',') {
+            ++p;
+        }
+    }
+    return true;
+}
+
+static bool
 parse_camera_fps(const char *s, uint16_t *camera_fps) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "camera fps");
@@ -2859,6 +2941,50 @@ parse_args_with_getopt(struct scrcpy_cli_args *args, int argc, char *argv[],
                     return false;
                 }
                 break;
+            case OPT_IOS:
+                opts->ios = true;
+                break;
+            case OPT_IOS_UDID:
+                opts->ios = true;
+                opts->ios_udid = optarg;
+                break;
+            case OPT_LIST_IOS_DEVICES:
+                opts->list_ios_devices = true;
+                break;
+            case OPT_IOS_PORT:
+                if (!parse_port(optarg, &opts->ios_port)) {
+                    return false;
+                }
+                break;
+            case OPT_IOS_RECONNECT: {
+                long value;
+                if (!parse_integer_arg(optarg, &value, false, 0, 3600,
+                                       "ios reconnect")) {
+                    return false;
+                }
+                opts->ios_reconnect = (uint16_t) value;
+                break;
+            }
+            case OPT_CAMERA_LOCK:
+                if (!parse_camera_lock(optarg)) {
+                    return false;
+                }
+                opts->camera_lock = optarg;
+                break;
+            case OPT_CAMERA_STABILIZATION:
+                opts->camera_stabilization = true;
+                break;
+            case OPT_KEYFRAME_INTERVAL: {
+                char *end;
+                double value = strtod(optarg, &end);
+                if (*end || value <= 0 || value > 60) {
+                    LOGE("Invalid key frame interval: %s (0 to 60 seconds)",
+                         optarg);
+                    return false;
+                }
+                opts->keyframe_interval = optarg;
+                break;
+            }
             case OPT_CAMERA_FPS:
                 if (!parse_camera_fps(optarg, &opts->camera_fps)) {
                     return false;
@@ -2959,6 +3085,39 @@ parse_args_with_getopt(struct scrcpy_cli_args *args, int argc, char *argv[],
 
     // If a TCP/IP address is provided, then tcpip must be enabled
     assert(opts->tcpip || !opts->tcpip_dst);
+
+    if (opts->list_ios_devices) {
+        // Handled by scrcpy() before anything else
+        return true;
+    }
+
+    if (opts->ios) {
+        if (opts->serial || opts->tcpip || opts->select_tcpip
+                || opts->select_usb) {
+            LOGE("--ios is not compatible with Android device selectors "
+                 "(use --ios-udid to select an iPhone)");
+            return false;
+        }
+#ifdef HAVE_USB
+        if (opts->otg) {
+            LOGE("--ios is not compatible with --otg");
+            return false;
+        }
+#endif
+        if (opts->video_codec != SC_CODEC_H264
+                && opts->video_codec != SC_CODEC_H265) {
+            LOGE("The iPhone only supports --video-codec=h264 or h265");
+            return false;
+        }
+        // The Lente app only sends the camera, without audio
+        opts->video_source = SC_VIDEO_SOURCE_CAMERA;
+        opts->audio = false;
+    } else if (opts->ios_port || opts->camera_lock
+            || opts->camera_stabilization || opts->keyframe_interval) {
+        LOGE("--ios-port, --camera-lock, --camera-stabilization and "
+             "--keyframe-interval require --ios");
+        return false;
+    }
 
     unsigned selectors = !!opts->serial
                        + !!opts->tcpip_dst

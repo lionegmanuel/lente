@@ -33,6 +33,11 @@ src = [
     'src/screen.c',
     'src/sdl_hints.c',
     'src/server.c',
+    'src/ios/ios_server.c',
+    'src/ios/lente_msg.c',
+    'src/ios/plist_min.c',
+    'src/ios/usbmux.c',
+    'src/ios/usbmux_proto.c',
     'src/texture.c',
     'src/version.c',
     'src/video_regulator.c',
@@ -284,6 +289,13 @@ if get_option('buildtype') == 'debug'
         ]],
         ['test_vector', [
             'tests/test_vector.c',
+        ]],
+        ['test_lente_ios', [
+            'tests/test_lente_ios.c',
+            'src/ios/lente_msg.c',
+            'src/ios/plist_min.c',
+            'src/ios/usbmux_proto.c',
+            'src/util/strbuf.c',
         ]],
     ]
 
