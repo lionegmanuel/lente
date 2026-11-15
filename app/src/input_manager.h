@@ -26,6 +26,11 @@ struct sc_input_manager {
 
     bool camera;
 
+    // Lente: iPhone state for the shortcuts
+    bool ios;
+    uint8_t ios_lens;
+    uint8_t ios_locks;
+
     struct sc_mouse_bindings mouse_bindings;
     bool legacy_paste;
     bool clipboard_autosync;
@@ -58,6 +63,7 @@ struct sc_input_manager_params {
     struct sc_mouse_processor *mp;
     struct sc_gamepad_processor *gp;
     bool camera;
+    bool ios; // Lente: iPhone shortcuts
 
     struct sc_mouse_bindings mouse_bindings;
     bool legacy_paste;

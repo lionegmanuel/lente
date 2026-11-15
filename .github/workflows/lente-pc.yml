@@ -77,12 +77,14 @@ jobs:
           ./build-e2e/app/scrcpy --list-ios-devices 2>&1 | tee lista.log
           grep -q "SIMULADO-0000-LENTE" lista.log
           echo "== sesion de 4 segundos grabando a un archivo"
-          ./build-e2e/app/scrcpy --ios --no-window --record=salida.mkv --time-limit=4 \
+          ./build-e2e/app/scrcpy --ios --no-window --record=salida.mkv --time-limit=4 -V debug \
               --camera-fps=30 --video-bit-rate=24M --capture-orientation=180 2>&1 | tee lente.log
           cat iphone.log
           grep -q "capture_orientation=180" iphone.log
           grep -q "camera_fps=30" iphone.log
           grep -q "control abierto, sesion OK" iphone.log
+          grep -q "iPhone telemetry: .*87%" lente.log
+          grep -q "lens changed): 1x" lente.log
           cuadros=$(ffprobe -v error -count_frames -select_streams v:0 \
               -show_entries stream=nb_read_frames -of csv=p=0 salida.mkv)
           tam=$(ffprobe -v error -select_streams v:0 -show_entries stream=width,height -of csv=p=0:s=x salida.mkv)

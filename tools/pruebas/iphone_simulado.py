@@ -60,6 +60,16 @@ class Simulador:
         self.fps = fps
         self.control = bytearray()
 
+    def telemetria(self, s: socket.socket) -> None:
+        """Como la app: telemetria cada segundo y un evento de cambio de lente."""
+        try:
+            s.sendall(evento_bytes(3, "1x"))
+            for i in range(1, 30):
+                s.sendall(telemetria_bytes(i * 30))
+                time.sleep(1)
+        except OSError:
+            pass
+
     def atender(self, s: socket.socket) -> None:
         try:
             largo, _v, _t, tag = struct.unpack("<IIII", leer(s, 16))
@@ -83,6 +93,7 @@ class Simulador:
             if magia == b"LNTC":
                 sesion = struct.unpack(">Q", leer(s, 8))[0]
                 log(f"control abierto, sesion {'OK' if sesion == SESION else 'INCORRECTA'}")
+                threading.Thread(target=self.telemetria, args=(s,), daemon=True).start()
                 while True:
                     parte = s.recv(4096)
                     if not parte:
@@ -118,6 +129,16 @@ class Simulador:
             log(f"conexion cerrada ({e.__class__.__name__})")
         finally:
             s.close()
+
+
+def telemetria_bytes(cuadros: int) -> bytes:
+    # 0x60: termico, bateria, estado de bateria, cuadros, descartados, tasa de bits
+    return bytes([0x60, 1, 87, 2]) + struct.pack(">III", cuadros, 0, 24_000_000)
+
+
+def evento_bytes(codigo: int, texto: str) -> bytes:
+    datos = texto.encode()
+    return bytes([0x61, codigo]) + struct.pack(">H", len(datos)) + datos
 
 
 def main() -> None:

@@ -185,6 +185,13 @@ sc_control_msg_serialize(const struct sc_control_msg *msg, uint8_t *buf) {
         case SC_CONTROL_MSG_TYPE_CAMERA_SET_TORCH:
             buf[1] = msg->camera_set_torch.on ? 1 : 0;
             return 2;
+        case SC_CONTROL_MSG_TYPE_LENTE_SET_LENS:
+            buf[1] = msg->lente_set_lens.lens;
+            return 2;
+        case SC_CONTROL_MSG_TYPE_LENTE_LOCK:
+            buf[1] = msg->lente_lock.what;
+            buf[2] = msg->lente_lock.on ? 1 : 0;
+            return 3;
         case SC_CONTROL_MSG_TYPE_RESIZE_DISPLAY:
             sc_write16be(&buf[1], msg->resize_display.width);
             sc_write16be(&buf[3], msg->resize_display.height);
@@ -348,6 +355,13 @@ sc_control_msg_log(const struct sc_control_msg *msg) {
             break;
         case SC_CONTROL_MSG_TYPE_SCAN_FILE:
             LOG_CMSG("scan file \"%s\"", msg->scan_file.path);
+            break;
+        case SC_CONTROL_MSG_TYPE_LENTE_SET_LENS:
+            LOG_CMSG("lente set lens %u", (unsigned) msg->lente_set_lens.lens);
+            break;
+        case SC_CONTROL_MSG_TYPE_LENTE_LOCK:
+            LOG_CMSG("lente lock %u %s", (unsigned) msg->lente_lock.what,
+                     msg->lente_lock.on ? "on" : "off");
             break;
         default:
             LOG_CMSG("unknown type: %u", (unsigned) msg->type);

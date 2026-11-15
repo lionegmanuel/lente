@@ -35,6 +35,7 @@ src = [
     'src/server.c',
     'src/ios/ios_server.c',
     'src/ios/lente_msg.c',
+    'src/ios/lente_ui.c',
     'src/ios/plist_min.c',
     'src/ios/usbmux.c',
     'src/ios/usbmux_proto.c',

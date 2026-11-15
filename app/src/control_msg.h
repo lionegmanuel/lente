@@ -50,7 +50,15 @@ enum sc_control_msg_type {
     SC_CONTROL_MSG_TYPE_CAMERA_ZOOM_OUT,
     SC_CONTROL_MSG_TYPE_RESIZE_DISPLAY,
     SC_CONTROL_MSG_TYPE_SCAN_FILE,
+    // Lente (iPhone): own range, out of the scrcpy one
+    SC_CONTROL_MSG_TYPE_LENTE_SET_LENS = 0x60,
+    SC_CONTROL_MSG_TYPE_LENTE_LOCK = 0x61,
 };
+
+// Lente lock flags (SC_CONTROL_MSG_TYPE_LENTE_LOCK)
+#define SC_LENTE_LOCK_EXPOSURE 1
+#define SC_LENTE_LOCK_FOCUS 2
+#define SC_LENTE_LOCK_WB 4
 
 enum sc_copy_key {
     SC_COPY_KEY_NONE,
@@ -121,6 +129,13 @@ struct sc_control_msg {
         struct {
             bool on;
         } camera_set_torch;
+        struct {
+            uint8_t lens; // 0 ultra wide, 1 wide, 2 telephoto, 3 front
+        } lente_set_lens;
+        struct {
+            uint8_t what; // OR of SC_LENTE_LOCK_*
+            bool on;
+        } lente_lock;
         struct {
             uint16_t width;
             uint16_t height;

@@ -71,6 +71,36 @@ sc_device_msg_deserialize(const uint8_t *buf, size_t len,
 
             return 5 + size;
         }
+        case DEVICE_MSG_TYPE_LENTE_TELEMETRY:
+            if (len < 16) {
+                return 0; // not available
+            }
+            msg->lente_telemetry.thermal = buf[1];
+            msg->lente_telemetry.battery = buf[2];
+            msg->lente_telemetry.battery_state = buf[3];
+            msg->lente_telemetry.frames = sc_read32be(&buf[4]);
+            msg->lente_telemetry.dropped = sc_read32be(&buf[8]);
+            msg->lente_telemetry.bit_rate = sc_read32be(&buf[12]);
+            return 16;
+        case DEVICE_MSG_TYPE_LENTE_EVENT: {
+            if (len < 4) {
+                return 0; // not available
+            }
+            uint16_t text_len = sc_read16be(&buf[2]);
+            if (text_len > len - 4) {
+                return 0; // not available
+            }
+            char *text = malloc(text_len + 1);
+            if (!text) {
+                LOG_OOM();
+                return -1;
+            }
+            memcpy(text, &buf[4], text_len);
+            text[text_len] = '\0';
+            msg->lente_event.code = buf[1];
+            msg->lente_event.text = text;
+            return 4 + text_len;
+        }
         default:
             LOGW("Unknown device message type: %d", (int) msg->type);
             return -1; // error, we cannot recover
@@ -85,6 +115,9 @@ sc_device_msg_destroy(struct sc_device_msg *msg) {
             break;
         case DEVICE_MSG_TYPE_UHID_OUTPUT:
             free(msg->uhid_output.data);
+            break;
+        case DEVICE_MSG_TYPE_LENTE_EVENT:
+            free(msg->lente_event.text);
             break;
         default:
             // nothing to do
