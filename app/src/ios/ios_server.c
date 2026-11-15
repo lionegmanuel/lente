@@ -635,6 +635,7 @@ stop_bridge(void) {
 int
 sc_ios_server_run(struct sc_server *server) {
     const struct sc_server_params *params = &server->params;
+    sc_tick start = sc_tick_now();
     uint16_t port = params->ios_port ? params->ios_port : SC_IOS_DEFAULT_PORT;
 
     if (params->list) {
@@ -705,6 +706,11 @@ sc_ios_server_run(struct sc_server *server) {
     return 0;
 
 error_connection_failed:
+    // Windows: a failure in the first instants (no iPhone connected) made the
+    // client hang on exit, a race with the SDL video initialization on the
+    // main thread (Android never fails that fast because of adb). Reporting
+    // the failure after at least 2 seconds avoids it (tested on the laptop).
+    wait_or_stopped(server, start + SC_TICK_FROM_SEC(2));
     server->cbs->on_connection_failed(server, server->cbs_userdata);
     return -1;
 }

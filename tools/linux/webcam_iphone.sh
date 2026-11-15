@@ -166,7 +166,7 @@ arrancar() {
 MODO="rapido"
 if [[ -n "$LENTE_BIN" ]] && ! $RAPIDO; then
     MODO="completo"
-    CMD=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600)
+    CMD=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600 --pause-on-exit=false)
     [[ -n "$GIRAR" ]] && CMD+=(--capture-orientation=180)
     if $VENTANA; then
         CMD+=(--window-title=Lente)
@@ -174,8 +174,14 @@ if [[ -n "$LENTE_BIN" ]] && ! $RAPIDO; then
         CMD+=(--v4l2-sink="$DISPOSITIVO" --no-playback --no-window)
     fi
     arrancar "${CMD[@]}"
-    # Lente frena enseguida si no puede (app del iPhone vieja, sin iPhone...): modo rapido
-    sleep 6
+    # Hasta 20 s: si la sesion arranca, listo; si lente se cierra (sin iPhone, app vieja), modo rapido.
+    # Si sigue abierto esperando que se abra la app en el iPhone, se queda (reconecta solo).
+    INICIO_LOG=$(wc -l < "$LOG")
+    for _ in $(seq 20); do
+        sleep 1
+        kill -0 "$PID" 2>/dev/null || break
+        tail -n +"$((INICIO_LOG + 1))" "$LOG" | grep -q "App del iPhone:" && break
+    done
     if ! kill -0 "$PID" 2>/dev/null; then
         rm -f "$PIDFILE"
         echo "[$(date '+%F %T')] Lente para la PC no arranco, paso al modo rapido" >> "$LOG"

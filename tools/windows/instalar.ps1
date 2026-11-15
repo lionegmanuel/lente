@@ -60,15 +60,20 @@ if (-not $SinCliente) {
         New-Item -ItemType Directory -Force $destino | Out-Null
         $ProgressPreference = 'SilentlyContinue'
         Invoke-WebRequest "$url/Lente-PC-windows-x64.zip" -OutFile $zip -UseBasicParsing
-        $esperado = ((Invoke-WebRequest "$url/Lente-PC-windows-x64.zip.sha256" -UseBasicParsing).Content -split '\s+')[0]
+        # El .sha256 llega como binario: se guarda y se lee como texto
+        $sha = "$zip.sha256"
+        Invoke-WebRequest "$url/Lente-PC-windows-x64.zip.sha256" -OutFile $sha -UseBasicParsing
+        $esperado = ((Get-Content $sha -Raw).Trim() -split '\s+')[0].ToLower()
+        Remove-Item $sha
         $real = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
-        if ($real -ne $esperado.ToLower()) { throw "SHA256 no coincide ($real)" }
+        if ($real -ne $esperado) { throw "SHA256 no coincide ($real, esperado $esperado)" }
         Get-ChildItem $destino -Directory | Remove-Item -Recurse -Force
         Expand-Archive $zip -DestinationPath $destino -Force
         Remove-Item $zip
         $exe = Get-ChildItem (Join-Path $destino '*\lente.exe') | Select-Object -First 1
         Bien "Lente para la PC: $($exe.FullName)"
     } catch {
+        Remove-Item $zip, "$zip.sha256" -ErrorAction SilentlyContinue
         Aviso "No se pudo bajar Lente para la PC ($($_.Exception.Message)): queda el modo rapido."
     }
 }
