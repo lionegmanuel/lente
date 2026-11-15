@@ -77,8 +77,8 @@ Detección automática: si no se pasa ni `--ios` ni `-s`, y adb no ve dispositiv
 | Alt+O / Alt+Shift+O | Pantalla en negro / volver |
 | Alt+T / Alt+Shift+T | Linterna encendida / apagada (son las teclas de cámara de scrcpy 4.1, verificado) |
 | Alt+Arriba / Alt+Abajo | Zoom de cámara (son los de scrcpy 4.1, verificado) |
-| Alt+L | Siguiente lente (0,5x → 1x → 5x) |
-| Alt+E / Alt+F / Alt+W | Bloquear o liberar exposición, foco, balance de blancos |
+| Alt+L / Alt+Shift+L | Siguiente lente trasera (0,5x, 1x, 5x) / cámara frontal |
+| Alt+E / Alt+A / Alt+Y | Bloquear o liberar exposición, foco (autofoco), balance de blancos. Cambio del 2026-11-15: F y W ya los usa scrcpy 4.1 (pantalla completa y ajustar ventana) |
 | Alt+Shift+R | Reiniciar video (pide cuadro clave) |
 | Alt+Q | Cerrar |
 | Los atajos de toque, teclado y portapapeles | No hacen nada con iPhone, sin errores |

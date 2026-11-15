@@ -29,6 +29,9 @@ sc_input_manager_init(struct sc_input_manager *im,
     im->mp = params->mp;
     im->gp = params->gp;
     im->camera = params->camera;
+    im->ios = params->ios;
+    im->ios_lens = 1; // wide (1x) by default
+    im->ios_locks = 0;
 
     im->mouse_bindings = params->mouse_bindings;
     im->legacy_paste = params->legacy_paste;
@@ -338,6 +341,48 @@ camera_zoom_out(struct sc_input_manager *im) {
     if (!sc_controller_push_msg(im->controller, &msg)) {
         LOGW("Could not request camera zoom out");
     }
+}
+
+static void
+lente_set_lens(struct sc_input_manager *im, uint8_t lens) {
+    assert(im->controller && im->ios);
+
+    struct sc_control_msg msg;
+    msg.type = SC_CONTROL_MSG_TYPE_LENTE_SET_LENS;
+    msg.lente_set_lens.lens = lens;
+
+    if (!sc_controller_push_msg(im->controller, &msg)) {
+        LOGW("Could not request a lens change");
+        return;
+    }
+    im->ios_lens = lens;
+    static const char *const names[] = {"0.5x", "1x", "5x", "frontal"};
+    LOGI("iPhone: lente %s", names[lens & 3]);
+}
+
+static void
+lente_toggle_lock(struct sc_input_manager *im, uint8_t what) {
+    assert(im->controller && im->ios);
+
+    bool on = !(im->ios_locks & what);
+    struct sc_control_msg msg;
+    msg.type = SC_CONTROL_MSG_TYPE_LENTE_LOCK;
+    msg.lente_lock.what = what;
+    msg.lente_lock.on = on;
+
+    if (!sc_controller_push_msg(im->controller, &msg)) {
+        LOGW("Could not request a camera lock");
+        return;
+    }
+    if (on) {
+        im->ios_locks |= what;
+    } else {
+        im->ios_locks &= ~what;
+    }
+    const char *name = what == SC_LENTE_LOCK_EXPOSURE ? "exposicion"
+                     : what == SC_LENTE_LOCK_FOCUS ? "foco"
+                     : "balance de blancos";
+    LOGI("iPhone: %s %s", name, on ? "bloqueado" : "automatico");
 }
 
 static void
@@ -663,6 +708,37 @@ sc_input_manager_process_key(struct sc_input_manager *im,
                     if (!shift && down && !paused) {
                         // forward repeated events
                         camera_zoom_in(im);
+                    }
+                    return;
+                // Lente: iPhone shortcuts (keys not used by scrcpy 4.1)
+                case SDLK_O:
+                    if (im->ios && !repeat && down) {
+                        // MOD+o: black screen, MOD+Shift+o: back
+                        set_display_power(im, shift);
+                    }
+                    return;
+                case SDLK_L:
+                    if (im->ios && !repeat && down) {
+                        // MOD+l: next back lens, MOD+Shift+l: front
+                        uint8_t lens = shift ? 3
+                                     : im->ios_lens >= 2 ? 0
+                                     : im->ios_lens + 1;
+                        lente_set_lens(im, lens);
+                    }
+                    return;
+                case SDLK_E:
+                    if (im->ios && !shift && !repeat && down) {
+                        lente_toggle_lock(im, SC_LENTE_LOCK_EXPOSURE);
+                    }
+                    return;
+                case SDLK_A:
+                    if (im->ios && !shift && !repeat && down) {
+                        lente_toggle_lock(im, SC_LENTE_LOCK_FOCUS);
+                    }
+                    return;
+                case SDLK_Y:
+                    if (im->ios && !shift && !repeat && down) {
+                        lente_toggle_lock(im, SC_LENTE_LOCK_WB);
                     }
                     return;
             }

@@ -62,6 +62,9 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
     private let log = Logger(subsystem: "digital.velinex.lente", category: "camera")
     private let frameLock = NSLock()
     private var frameHandler: ((CMSampleBuffer) -> Void)?
+    /// Current camera and parameters (camera queue of the server)
+    private(set) var device: AVCaptureDevice?
+    private(set) var params: SessionParams?
 
     func setFrameHandler(_ handler: ((CMSampleBuffer) -> Void)?) {
         frameLock.lock()
@@ -156,15 +159,131 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
                 connection.automaticallyAdjustsVideoMirroring = false
                 connection.isVideoMirrored = false
             }
+            Self.applyRotation(params.rotation, to: connection)
         }
 
-        log.info("camera \(device.localizedName, privacy: .public) \(params.size.width)x\(params.size.height)@\(params.fps)")
-        return (params.size.width, params.size.height)
+        self.device = device
+        self.params = params
+        applyInitialControls(params)
+        let out = params.outputSize
+        log.info("camera \(device.localizedName, privacy: .public) \(out.width)x\(out.height)@\(params.fps) rot \(params.rotation)")
+        return (out.width, out.height)
+    }
+
+    /// The data output delivers landscape buffers (sensor orientation, 0 degrees).
+    /// Rotating here makes every output (window, V4L2, recording) come out straight.
+    private static func applyRotation(_ degrees: Int, to connection: AVCaptureConnection) {
+        guard degrees != 0 else { return }
+        if #available(iOS 17.0, *) {
+            let angle = CGFloat(degrees)
+            if connection.isVideoRotationAngleSupported(angle) {
+                connection.videoRotationAngle = angle
+            }
+        } else if connection.isVideoOrientationSupported {
+            switch degrees {
+            case 90: connection.videoOrientation = .portrait
+            case 180: connection.videoOrientation = .landscapeLeft
+            case 270: connection.videoOrientation = .portraitUpsideDown
+            default: break
+            }
+        }
+    }
+
+    private func applyInitialControls(_ params: SessionParams) {
+        if params.torch { setTorch(true) }
+        if let zoom = params.zoom { setZoom(zoom) }
+        if params.lockExposure { setLock(ControlMessage.lockExposure, on: true) }
+        if params.lockFocus { setLock(ControlMessage.lockFocus, on: true) }
+        if params.lockWhiteBalance { setLock(ControlMessage.lockWhiteBalance, on: true) }
+    }
+
+    // MARK: Controls (call them on the camera queue of the server)
+
+    private func withLock(_ body: (AVCaptureDevice) -> Void) {
+        guard let device else { return }
+        do {
+            try device.lockForConfiguration()
+            body(device)
+            device.unlockForConfiguration()
+        } catch {
+            log.error("lock failed: \(error.localizedDescription, privacy: .public)")
+        }
+    }
+
+    func setTorch(_ on: Bool) {
+        withLock { d in
+            guard d.hasTorch else { return }
+            if on, d.isTorchModeSupported(.on) {
+                try? d.setTorchModeOn(level: AVCaptureDevice.maxAvailableTorchLevel)
+            } else if d.isTorchModeSupported(.off) {
+                d.torchMode = .off
+            }
+        }
+    }
+
+    /// Zoom factor clamped to what the lens allows (digital zoom up to 10x)
+    func setZoom(_ factor: Double) {
+        withLock { d in
+            let maxZoom = min(d.maxAvailableVideoZoomFactor, 10)
+            let value = max(d.minAvailableVideoZoomFactor, min(CGFloat(factor), maxZoom))
+            d.ramp(toVideoZoomFactor: value, withRate: 8)
+        }
+    }
+
+    func zoom(in zoomIn: Bool) {
+        guard let device else { return }
+        setZoom(Double(device.videoZoomFactor) * (zoomIn ? 1.1 : 1 / 1.1))
+    }
+
+    func setLock(_ what: UInt8, on: Bool) {
+        withLock { d in
+            if what & ControlMessage.lockExposure != 0 {
+                let mode: AVCaptureDevice.ExposureMode = on ? .locked : .continuousAutoExposure
+                if d.isExposureModeSupported(mode) { d.exposureMode = mode }
+            }
+            if what & ControlMessage.lockFocus != 0 {
+                let mode: AVCaptureDevice.FocusMode = on ? .locked : .continuousAutoFocus
+                if d.isFocusModeSupported(mode) { d.focusMode = mode }
+            }
+            if what & ControlMessage.lockWhiteBalance != 0 {
+                let mode: AVCaptureDevice.WhiteBalanceMode = on ? .locked : .continuousAutoWhiteBalance
+                if d.isWhiteBalanceModeSupported(mode) { d.whiteBalanceMode = mode }
+            }
+        }
+    }
+
+    static let lensNames = ["0.5x", "1x", "5x", "frontal"]
+
+    /// Switch to another lens keeping the session (same size and frame rate).
+    /// Returns the output size, or throws and keeps the current lens.
+    func switchLens(_ id: Int) throws -> (width: Int, height: Int) {
+        guard var params, (0...3).contains(id) else {
+            throw CameraError.noDevice("lens \(id)")
+        }
+        params.cameraId = id
+        guard let next = Self.device(for: params) else {
+            throw CameraError.noDevice("lens \(id) (\(Self.lensNames[id]))")
+        }
+        let candidates = Self.candidates(next)
+        guard FormatSelection.choose(candidates, width: params.size.width, height: params.size.height,
+                                     fps: params.fps) != nil else {
+            throw CameraError.noFormat(FormatSelection.describe(candidates))
+        }
+        // Initial controls of the session (torch, zoom, locks) do not carry over
+        params.torch = false
+        params.zoom = nil
+        return try configure(params)
     }
 
     /// Blocking: call it off the main thread.
     func start() {
         if !session.isRunning { session.startRunning() }
+    }
+
+    /// Blocking: call it off the main thread. After a runtime error.
+    func restart() {
+        if session.isRunning { session.stopRunning() }
+        session.startRunning()
     }
 
     /// Blocking: call it off the main thread.

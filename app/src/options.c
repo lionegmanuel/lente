@@ -123,6 +123,14 @@ const struct scrcpy_options scrcpy_options_default = {
     .flex_display = false,
     .ignore_video_encoder_constraints = false,
     .update_terminal_title = true,
+    .ios = false,
+    .list_ios_devices = false,
+    .ios_udid = NULL,
+    .ios_port = 0,
+    .ios_reconnect = 30,
+    .camera_stabilization = false,
+    .camera_lock = NULL,
+    .keyframe_interval = NULL,
 };
 
 enum sc_orientation

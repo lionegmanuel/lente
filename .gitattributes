@@ -1,2 +1,3 @@
 # Scripts de Linux siempre con LF (se usan tal cual desde un disco compartido con Windows)
 tools/linux/*.sh text eol=lf
+tools/release/*.sh text eol=lf

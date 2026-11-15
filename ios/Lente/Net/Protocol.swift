@@ -129,12 +129,23 @@ struct SessionParams: Equatable {
     var control = true
     var stabilization = false
     var keyFrameInterval = 2.0
+    var torch = false
+    var zoom: Double?
+    /// Clockwise rotation of the output, in degrees: 0, 90, 180 or 270
+    var rotation = 0
+    var lockExposure = false
+    var lockFocus = false
+    var lockWhiteBalance = false
 
-    /// Accepted by the parser, applied in later phases.
+    /// Output size after the rotation
+    var outputSize: Size {
+        rotation == 90 || rotation == 270 ? Size(width: size.height, height: size.width) : size
+    }
+
+    /// Accepted by the parser and ignored (the iPhone has fixed lenses and sizes).
     static let reservedKeys: Set<String> = [
-        "max_size", "max_fps", "camera_high_speed", "camera_ar", "camera_torch",
-        "camera_zoom", "capture_orientation", "list_cameras", "list_camera_sizes",
-        "lente_lock_exposure", "lente_lock_focus", "lente_lock_wb",
+        "max_size", "max_fps", "camera_high_speed", "camera_ar", "list_cameras",
+        "list_camera_sizes",
     ]
 
     enum ParseError: Error, Equatable {
@@ -182,6 +193,22 @@ struct SessionParams: Equatable {
             case "camera_fps":
                 guard let v = Int(value), (1...240).contains(v) else { return .failure(bad) }
                 p.fps = v
+            case "camera_zoom":
+                guard let v = Double(value), v > 0, v <= 100 else { return .failure(bad) }
+                p.zoom = v
+            case "capture_orientation":
+                // scrcpy may prefix "@" (orientation lock): the iPhone app keeps it fixed anyway
+                let degrees = value.hasPrefix("@") ? String(value.dropFirst()) : value
+                guard let v = Int(degrees), [0, 90, 180, 270].contains(v) else { return .failure(bad) }
+                p.rotation = v
+            case "camera_torch", "lente_lock_exposure", "lente_lock_focus", "lente_lock_wb":
+                guard let b = Bool(value) else { return .failure(bad) }
+                switch key {
+                case "camera_torch": p.torch = b
+                case "lente_lock_exposure": p.lockExposure = b
+                case "lente_lock_focus": p.lockFocus = b
+                default: p.lockWhiteBalance = b
+                }
             case "send_device_meta", "send_stream_meta", "send_frame_meta", "raw_stream", "control":
                 guard let b = Bool(value) else { return .failure(bad) }
                 switch key {
@@ -247,6 +274,125 @@ enum ScrcpyPacket {
         var data = Data()
         data.appendBE(flags)
         data.appendBE(UInt32(size))
+        return data
+    }
+}
+
+/// Control messages from the PC (scrcpy 4.1 types plus Lente 0x60 to 0x6F).
+/// The app must know the length of every scrcpy message to skip the ones it
+/// does not use (keyboard, mouse, clipboard...).
+enum ControlMessage: Equatable {
+    case displayPower(on: Bool)
+    case resetVideo
+    case torch(on: Bool)
+    case zoomIn
+    case zoomOut
+    case setLens(UInt8)
+    case lock(what: UInt8, on: Bool)
+    case ignored(type: UInt8)
+
+    static let lockExposure: UInt8 = 1
+    static let lockFocus: UInt8 = 2
+    static let lockWhiteBalance: UInt8 = 4
+}
+
+enum ControlParser {
+    enum ParseError: Error, Equatable {
+        case unknownType(UInt8)
+    }
+
+    /// Next message starting at offset, with its length. nil if incomplete.
+    static func next(_ b: [UInt8], at i: Int) throws -> (ControlMessage, Int)? {
+        let n = b.count - i
+        guard n >= 1 else { return nil }
+        let type = b[i]
+
+        func need(_ len: Int) -> Bool { n >= len }
+        func u16(_ o: Int) -> Int { Int(readBE(b, at: i + o, as: UInt16.self)) }
+        func u32(_ o: Int) -> Int { Int(readBE(b, at: i + o, as: UInt32.self)) }
+
+        let len: Int
+        switch type {
+        case 0: len = 14 // inject keycode
+        case 1: // inject text: u32 length + text
+            guard need(5) else { return nil }
+            len = 5 + u32(1)
+        case 2: len = 32 // touch
+        case 3: len = 21 // scroll
+        case 4, 8, 10, 18: len = 2 // back or screen on, get clipboard, display power, torch
+        case 5, 6, 7, 11, 15, 17, 19, 20: len = 1 // no payload
+        case 9: // set clipboard: sequence u64, paste u8, u32 length + text
+            guard need(14) else { return nil }
+            len = 14 + u32(10)
+        case 12: // uhid create: id, vendor, product, u8 name length + name, u16 size + descriptor
+            guard need(8) else { return nil }
+            let nameLen = Int(b[i + 7])
+            guard need(8 + nameLen + 2) else { return nil }
+            len = 8 + nameLen + 2 + u16(8 + nameLen)
+        case 13: // uhid input: id u16, size u16, data
+            guard need(5) else { return nil }
+            len = 5 + u16(3)
+        case 14: len = 3 // uhid destroy
+        case 16: // start app: u8 length + name
+            guard need(2) else { return nil }
+            len = 2 + Int(b[i + 1])
+        case 21: len = 5 // resize display
+        case 22: // scan file: u32 length + path
+            guard need(5) else { return nil }
+            len = 5 + u32(1)
+        case 0x60: len = 2 // Lente: set lens
+        case 0x61: len = 3 // Lente: lock
+        default:
+            throw ParseError.unknownType(type)
+        }
+        guard need(len) else { return nil }
+
+        let message: ControlMessage
+        switch type {
+        case 10: message = .displayPower(on: b[i + 1] != 0)
+        case 17: message = .resetVideo
+        case 18: message = .torch(on: b[i + 1] != 0)
+        case 19: message = .zoomIn
+        case 20: message = .zoomOut
+        case 0x60: message = .setLens(b[i + 1])
+        case 0x61: message = .lock(what: b[i + 1], on: b[i + 2] != 0)
+        default: message = .ignored(type: type)
+        }
+        return (message, len)
+    }
+}
+
+/// Messages from the iPhone to the PC (Lente range, 0x60 to 0x6F).
+enum DeviceMessage {
+    struct Telemetry: Equatable {
+        var thermal: UInt8 // 0 nominal, 1 fair, 2 serious, 3 critical
+        var battery: UInt8 // percent, 255 unknown
+        var batteryState: UInt8 // 0 unknown, 1 unplugged, 2 charging, 3 full
+        var frames: UInt32
+        var dropped: UInt32
+        var bitRate: UInt32
+    }
+
+    enum EventCode: UInt8 {
+        case interrupted = 1
+        case resumed = 2
+        case lensChanged = 3
+    }
+
+    static func telemetry(_ t: Telemetry) -> Data {
+        var data = Data([0x60, t.thermal, t.battery, t.batteryState])
+        data.appendBE(t.frames)
+        data.appendBE(t.dropped)
+        data.appendBE(t.bitRate)
+        return data
+    }
+
+    static func event(_ code: EventCode, _ text: String) -> Data {
+        var bytes = Data(text.utf8)
+        if bytes.count > Int(UInt16.max) { bytes = bytes.prefix(Int(UInt16.max)) }
+        var data = Data([0x61, code.rawValue])
+        data.appendBE(UInt16(bytes.count))
+        data.append(bytes)
         return data
     }
 }

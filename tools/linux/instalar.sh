@@ -4,6 +4,7 @@
 #   bash tools/linux/instalar.sh             instala (pide la clave de sudo cuando hace falta)
 #   bash tools/linux/instalar.sh --simular   muestra lo que haria, sin tocar el sistema
 #   bash tools/linux/instalar.sh --sin-obs   no instala ni configura OBS
+#   bash tools/linux/instalar.sh --sin-cliente   no baja Lente para la PC (queda el modo rapido)
 #
 # Deja lista la camara del iPhone por cable para OBS:
 #   1. usbmuxd (habla con el iPhone por USB), herramientas de libimobiledevice, Python 3,
@@ -27,11 +28,13 @@ DISPOSITIVO="/dev/video${NR}"
 USUARIO="${USER:-$(id -un)}"
 SIMULAR=false
 CON_OBS=true
+CON_CLIENTE=true
 DATOS=""
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --simular) SIMULAR=true ;;
         --sin-obs) CON_OBS=false ;;
+        --sin-cliente) CON_CLIENTE=false ;;
         --datos) DATOS="${2:-}"; shift ;;
         *) echo "Opcion desconocida: $1"; exit 1 ;;
     esac
@@ -237,6 +240,30 @@ crear_lanzador "lente-webcam-iphone.desktop" "Webcam iPhone" ""
 crear_lanzador "lente-webcam-iphone-sin-girar.desktop" "Webcam iPhone (sin girar)" " --sin-girar"
 tiene update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
 ok "Menu y Escritorio: 'Webcam iPhone' y 'Webcam iPhone (sin girar)'. En terminal: webcam-iphone"
+
+# 4b. Lente para la PC (cliente completo): en el disco de datos, verificado por SHA256
+if $CON_CLIENTE; then
+    paso "Lente para la PC (cliente completo)"
+    URL="https://github.com/lionegmanuel/lente/releases/latest/download"
+    DEST="${DATOS}/lente-pc"
+    if $SIMULAR; then
+        echo -e "      ${GRIS}[simulado] bajar ${URL}/Lente-PC-linux-x86_64.tar.gz a ${DEST}${NC}"
+    elif TMPD="$(mktemp -d -p "${DATOS}/Temp/lente")" \
+            && curl -fsSL --retry 3 -o "${TMPD}/Lente-PC-linux-x86_64.tar.gz" "${URL}/Lente-PC-linux-x86_64.tar.gz" \
+            && curl -fsSL --retry 3 -o "${TMPD}/Lente-PC-linux-x86_64.tar.gz.sha256" "${URL}/Lente-PC-linux-x86_64.tar.gz.sha256" \
+            && (cd "$TMPD" && sha256sum -c Lente-PC-linux-x86_64.tar.gz.sha256 >/dev/null); then
+        mkdir -p "$DEST"
+        tar -xzf "${TMPD}/Lente-PC-linux-x86_64.tar.gz" -C "$DEST"
+        CARPETA="$(tar -tzf "${TMPD}/Lente-PC-linux-x86_64.tar.gz" | sed -n '1s|/.*||p')"
+        ln -sfn "${DEST}/${CARPETA}" "${DEST}/actual"
+        ln -sf "${DEST}/actual/lente" "$HOME/.local/bin/lente"
+        rm -rf "$TMPD"
+        ok "$("${DEST}/actual/lente" --version 2>/dev/null | head -n1) en ${DEST}/actual (comando: lente)"
+    else
+        [[ -n "${TMPD:-}" ]] && rm -rf "$TMPD"
+        aviso "No se pudo bajar Lente para la PC (sin internet o sin release publicado): queda el modo rapido."
+    fi
+fi
 
 # 5. OBS
 if $CON_OBS; then

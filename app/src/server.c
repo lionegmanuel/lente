@@ -8,6 +8,7 @@
 #include <sys/types.h>
 
 #include "adb/adb.h"
+#include "ios/ios_server.h"
 #include "util/env.h"
 #include "util/file.h"
 #include "util/log.h"
@@ -966,6 +967,11 @@ run_server(void *data) {
     struct sc_server *server = data;
 
     const struct sc_server_params *params = &server->params;
+
+    if (params->ios) {
+        // Lente: the iPhone backend replaces the whole adb flow
+        return sc_ios_server_run(server);
+    }
 
     // Execute "adb start-server" before "adb devices" so that daemon starting
     // output/errors is correctly printed in the console ("adb devices" output

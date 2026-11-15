@@ -112,6 +112,7 @@ struct sc_screen {
 struct sc_screen_params {
     bool video;
     bool camera;
+    bool ios; // Lente: iPhone shortcuts
     bool flex_display;
 
     struct sc_controller *controller;

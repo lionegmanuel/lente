@@ -6,6 +6,7 @@
 #include <SDL3/SDL_clipboard.h>
 
 #include "device_msg.h"
+#include "ios/lente_ui.h"
 #include "events.h"
 #include "util/log.h"
 #include "util/str.h"
@@ -154,6 +155,22 @@ process_msg(struct sc_receiver *receiver, struct sc_device_msg *msg) {
             }
 
             break;
+        case DEVICE_MSG_TYPE_LENTE_TELEMETRY: {
+            struct sc_lente_telemetry t = {
+                .thermal = msg->lente_telemetry.thermal,
+                .battery = msg->lente_telemetry.battery,
+                .battery_state = msg->lente_telemetry.battery_state,
+                .frames = msg->lente_telemetry.frames,
+                .dropped = msg->lente_telemetry.dropped,
+                .bit_rate = msg->lente_telemetry.bit_rate,
+            };
+            sc_lente_on_telemetry(&t);
+            break;
+        }
+        case DEVICE_MSG_TYPE_LENTE_EVENT:
+            // Take ownership of the text (do not destroy the msg)
+            sc_lente_on_event(msg->lente_event.code, msg->lente_event.text);
+            return;
     }
 }
 

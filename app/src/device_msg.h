@@ -15,6 +15,9 @@ enum sc_device_msg_type {
     DEVICE_MSG_TYPE_CLIPBOARD,
     DEVICE_MSG_TYPE_ACK_CLIPBOARD,
     DEVICE_MSG_TYPE_UHID_OUTPUT,
+    // Lente (iPhone)
+    DEVICE_MSG_TYPE_LENTE_TELEMETRY = 0x60,
+    DEVICE_MSG_TYPE_LENTE_EVENT = 0x61,
 };
 
 struct sc_device_msg {
@@ -31,6 +34,18 @@ struct sc_device_msg {
             uint16_t size;
             uint8_t *data; // owned, to be freed by free()
         } uhid_output;
+        struct {
+            uint8_t thermal;
+            uint8_t battery;
+            uint8_t battery_state;
+            uint32_t frames;
+            uint32_t dropped;
+            uint32_t bit_rate;
+        } lente_telemetry;
+        struct {
+            uint8_t code;
+            char *text; // owned, to be freed by free()
+        } lente_event;
     };
 };
 
