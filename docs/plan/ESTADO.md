@@ -2,18 +2,18 @@
 
 Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por avance, con fecha. Las mediciones van con su número.
 
-## Decisiones pendientes de Manuel
+## Decisiones de Manuel
 
-- [ ] D1 · Firma gratis con SideStore (cuenta paga solo para lanzar)
-- [ ] D2 · Repositorio público en GitHub (no publicar nada antes de este OK)
-- [ ] D3 · Nombre definitivo (hoy «Lente»)
-- [ ] D4 · Versión de iOS del iPhone: ______
+- [x] D1 · Firma gratis con SideStore y un Apple ID gratis aparte, creado solo para esto; Sideloadly de plan B (Manuel, 2026-11-15)
+- [x] D2 · Repositorio público en GitHub, Apache 2.0 (Manuel, 2026-11-15)
+- [x] D3 · Nombre definitivo «Lente», Bundle ID `digital.velinex.lente` (Manuel, 2026-11-15)
+- [x] D4 · iPhone de Manuel con iOS 26; versión mínima de la app 16.0 (Manuel, 2026-11-15)
 
 ## Fases
 
 | Fase | Estado | Compuerta pasada | Notas |
 |---|---|---|---|
-| 0 · Cimientos y pruebas de riesgo | En curso | | Repo local y app mínima listos; esperan D1 a D4 y Apple Devices |
+| 0 · Cimientos y pruebas de riesgo | En curso | | D1 a D4 confirmadas; repo y app mínima listos; espera Apple Devices y la instalación por SideStore |
 | 1 · Servidor iOS | Pendiente | | |
 | 2 · Cliente PC | Pendiente | | |
 | 3 · Controles y telemetría | Pendiente | | |
@@ -58,3 +58,4 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Fase 0: protocolo de scrcpy 4.1 verificado en el código; 9 diferencias anotadas arriba y plan corregido.
 - 2026-11-15 · Fase 0: app mínima (pantalla «Hola», permiso de cámara, sonda en `127.0.0.1:27183` que manda `LENTE-F0` más un contador cada 50 ms), prueba XCTest y workflow `lente-ios.yml` escritos. Sin compilar todavía: el CI necesita el repo publicado (D2).
 - 2026-11-15 · Fase 0: laptop sin Apple Mobile Device Service (`usbmux_probe.py --listar` responde «Instalá Apple Devices»). Falta que Manuel lo instale.
+- 2026-11-15 · Fase 0: Manuel confirmó D1 a D4 en un solo mensaje. «Lente» libre en GitHub (`lionegmanuel/lente` no existía).

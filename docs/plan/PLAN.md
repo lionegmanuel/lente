@@ -72,10 +72,10 @@ Detalle: [ARQUITECTURA_Y_PROTOCOLO.md](ARQUITECTURA_Y_PROTOCOLO.md), [APP_IOS.md
 
 | # | Decisión | Valor por defecto del plan | Estado |
 |---|---|---|---|
-| D1 | Firma e instalación | Apple ID gratis + SideStore; cuenta paga solo si se lanza al público | **Confirmar con Manuel** |
-| D2 | Repositorio | Público en GitHub, licencia Apache 2.0 (la de scrcpy) | **Confirmar con Manuel antes de publicar** |
-| D3 | Nombre | «Lente» provisional | **Pendiente de Manuel** |
-| D4 | Versión mínima de iOS | iOS 16.0 (la del iPhone de Manuel se lee en la Fase 0) | Fase 0 |
+| D1 | Firma e instalación | Apple ID gratis aparte + SideStore; Sideloadly de plan B | Tomada (Manuel) |
+| D2 | Repositorio | Público en GitHub, licencia Apache 2.0 (la de scrcpy) | Tomada (Manuel) |
+| D3 | Nombre | «Lente» | Tomada (Manuel) |
+| D4 | Versión mínima de iOS | iOS 16.0 (el iPhone de Manuel tiene iOS 26) | Tomada |
 | D5 | Base del cliente | scrcpy 4.1 (la versión que Manuel ya usa), con política de actualización | Tomada |
 | D6 | Puerto en el iPhone | 27183, solo en loopback | Tomada |
 | D7 | Audio | Ninguno en v1 | Tomada (Manuel) |
