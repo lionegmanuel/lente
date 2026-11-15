@@ -92,6 +92,26 @@ jobs:
           test "$tam" = "1920x1080"
           test "$cuadros" -ge 60
 
+      - name: Reconexion (el iPhone se corta a la mitad y vuelve)
+        run: |
+          export LD_LIBRARY_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib
+          export SDL_VIDEODRIVER=dummy SDL_AUDIODRIVER=dummy
+          export USBMUXD_SOCKET_ADDRESS=127.0.0.1:27998
+          python3 tools/pruebas/iphone_simulado.py --puerto 27998 --video prueba.h264 \
+              --sesiones 2 --cortar-tras 45 2> iphone2.log &
+          sleep 1
+          ./build-e2e/app/scrcpy --ios --no-window --record=reconexion.mkv --time-limit=8 \
+              --ios-reconnect=10 2>&1 | tee lente2.log
+          cat iphone2.log
+          grep -q "corte simulado" iphone2.log
+          grep -q "sesion 2: LNTE" iphone2.log
+          grep -q "reconectado" lente2.log
+          cuadros=$(ffprobe -v error -count_frames -select_streams v:0 \
+              -show_entries stream=nb_read_frames -of csv=p=0 reconexion.mkv)
+          echo "Cuadros grabados con un corte en el medio: $cuadros" | tee -a "$GITHUB_STEP_SUMMARY"
+          # 45 de la primera sesion y mas de la segunda, en el mismo archivo
+          test "$cuadros" -gt 60
+
       - name: Android sigue igual (sin iPhone, el camino de adb no cambia)
         run: |
           export LD_LIBRARY_PATH="$PWD"/app/deps/work/install/linux-native-shared/lib

@@ -53,12 +53,14 @@ def cuadros_annexb(ruta: str) -> tuple:
 
 
 class Simulador:
-    def __init__(self, video: str, sesiones: int, fps: int) -> None:
+    def __init__(self, video: str, sesiones: int, fps: int, cortar_tras: int) -> None:
         self.config, self.cuadros = cuadros_annexb(video)
         self.sesiones_max = sesiones
         self.sesiones = 0
         self.fps = fps
+        self.cortar_tras = cortar_tras
         self.control = bytearray()
+        self.control_abierto = None
 
     def telemetria(self, s: socket.socket) -> None:
         """Como la app: telemetria cada segundo y un evento de cambio de lente."""
@@ -93,6 +95,7 @@ class Simulador:
             if magia == b"LNTC":
                 sesion = struct.unpack(">Q", leer(s, 8))[0]
                 log(f"control abierto, sesion {'OK' if sesion == SESION else 'INCORRECTA'}")
+                self.control_abierto = s
                 threading.Thread(target=self.telemetria, args=(s,), daemon=True).start()
                 while True:
                     parte = s.recv(4096)
@@ -116,12 +119,22 @@ class Simulador:
             s.sendall(b"iPhone simulado".ljust(64, b"\0") + b"h264")
             s.sendall(bytes([0x80, 0, 0, 0]) + struct.pack(">II", 1920, 1080))
             s.sendall(struct.pack(">QI", 1 << 62, len(self.config)) + self.config)
-            for i, c in enumerate(self.cuadros):
+            cuadros = self.cuadros
+            cortar = self.cortar_tras and self.sesiones < self.sesiones_max
+            if cortar:
+                cuadros = cuadros[:self.cortar_tras]
+            for i, c in enumerate(cuadros):
                 clave = (c[4] & 0x1F) == 5
                 pts = i * 1_000_000 // self.fps
                 s.sendall(struct.pack(">QI", pts | ((1 << 61) if clave else 0), len(c)) + c)
                 time.sleep(1 / self.fps)
-            log(f"sesion {self.sesiones}: {len(self.cuadros)} cuadros enviados")
+            log(f"sesion {self.sesiones}: {len(cuadros)} cuadros enviados")
+            if cortar:
+                # Como desenchufar el cable: se cortan video y control
+                log(f"sesion {self.sesiones}: corte simulado")
+                if self.control_abierto:
+                    self.control_abierto.close()
+                return
             # Queda abierta hasta que la PC corte, como la app
             while s.recv(4096):
                 pass
@@ -147,8 +160,10 @@ def main() -> None:
     ap.add_argument("--video", required=True)
     ap.add_argument("--sesiones", type=int, default=1)
     ap.add_argument("--fps", type=int, default=30)
+    ap.add_argument("--cortar-tras", type=int, default=0,
+                    help="corta la sesion tras N cuadros (si quedan sesiones), para probar la reconexion")
     a = ap.parse_args()
-    sim = Simulador(a.video, a.sesiones, a.fps)
+    sim = Simulador(a.video, a.sesiones, a.fps, a.cortar_tras)
     srv = socket.socket()
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     srv.bind(("127.0.0.1", a.puerto))
