@@ -14,8 +14,10 @@ param(
 )
 
 $tools = Split-Path -Parent $PSScriptRoot
+# La version mas alta (carpetas Lente-PC-windows-x64-vX.Y.Z)
 $lente = Get-ChildItem (Join-Path $PSScriptRoot 'lente-pc\*\lente.exe') -ErrorAction SilentlyContinue |
-    Sort-Object LastWriteTime -Descending | Select-Object -First 1
+    Sort-Object { try { [version]($_.Directory.Name -replace '^.*-v', '') } catch { [version]'0.0' } } -Descending |
+    Select-Object -First 1
 $registro = 'D:\Temp\operius\lente'
 if (-not (Test-Path 'D:\')) { $registro = Join-Path $env:TEMP 'lente' }
 New-Item -ItemType Directory -Force $registro | Out-Null

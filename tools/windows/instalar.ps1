@@ -67,10 +67,16 @@ if (-not $SinCliente) {
         Remove-Item $sha
         $real = (Get-FileHash $zip -Algorithm SHA256).Hash.ToLower()
         if ($real -ne $esperado) { throw "SHA256 no coincide ($real, esperado $esperado)" }
-        Get-ChildItem $destino -Directory | Remove-Item -Recurse -Force
+        # Versiones viejas: se borran si se puede (si un archivo esta en uso, quedan; el
+        # lanzador usa siempre la version mas alta)
+        Get-ChildItem $destino -Directory | ForEach-Object {
+            try { Remove-Item $_.FullName -Recurse -Force -ErrorAction Stop } catch { Aviso "Queda $($_.Exception.Message)" }
+        }
         Expand-Archive $zip -DestinationPath $destino -Force
         Remove-Item $zip
-        $exe = Get-ChildItem (Join-Path $destino '*\lente.exe') | Select-Object -First 1
+        $exe = Get-ChildItem (Join-Path $destino '*\lente.exe') |
+            Sort-Object { try { [version]($_.Directory.Name -replace '^.*-v', '') } catch { [version]'0.0' } } -Descending |
+            Select-Object -First 1
         Bien "Lente para la PC: $($exe.FullName)"
     } catch {
         Remove-Item $zip, "$zip.sha256" -ErrorAction SilentlyContinue
