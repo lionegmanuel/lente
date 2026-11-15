@@ -110,7 +110,7 @@ final class CameraController: NSObject, AVCaptureVideoDataOutputSampleBufferDele
         session.beginConfiguration()
         defer { session.commitConfiguration() }
         session.sessionPreset = .inputPriority
-        session.automaticallyConfiguresCaptureDeviceWideColor = false
+        session.automaticallyConfiguresCaptureDeviceForWideColor = false
         for input in session.inputs { session.removeInput(input) }
         for output in session.outputs { session.removeOutput(output) }
 
