@@ -31,7 +31,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 | Cuadros promedio 1080p60, 30 min | 59,5 o más | | |
 | CPU PC 1080p60 (GPU / software) | 8% o menos con GPU | | |
 | Batería iPhone por hora, 1080p60 | 10% o menos | | |
-| Tamaño IPA | menos de 2 MB | 29.183 bytes (app mínima de la Fase 0) | 2026-11-15 |
+| Tamaño IPA | menos de 2 MB | 75.419 bytes (app de la Fase 1) | 2026-11-15 |
 | Sonda por cable, Windows (Fase 0) | bytes íntegros | 7.236 bytes en unos 30 s, 603 bloques `LENTE-F0` con contador 0 a 602 sin saltos | 2026-11-15 |
 | Arranque hasta imagen | 3 s o menos | | |
 | Reconexión | 3 s o menos | | |
@@ -69,3 +69,4 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Compuerta de la Fase 0 pasada. Línea de base con Android: no hay uno a mano, se toma la meta del plan (sección 5). Fedora queda para la Fase 2.
 - 2026-11-15 · Fase 0, respuestas de Manuel: Lente abrió, pidió la cámara y el permiso quedó concedido; después de la sonda vuelve a «Esperando la computadora» (correcto). El iPhone no mostró ningún aviso durante la conexión (riesgo R1: con el iPhone en «Confiar», conectar a un puerto no pide nada).
 - 2026-11-15 · Fase 1: rama `fase-1-servidor-ios`. App 0.2.0: cámara física con formato `420v` elegido por tamaño y cuadros, estabilización y HDR apagados; `VTCompressionSession` con control de tasa de baja latencia, sin cuadros B; AVCC a Annex B; servidor LNTE con el formato de scrcpy 4.1 (respuesta, nombre del modelo, códec, paquete de sesión, encabezados de 12 bytes) y `raw_stream`; descarte de cuadros no clave con más de 2 envíos pendientes. La conexión de control se acepta y se ignora hasta la Fase 3. `usbmux_probe.py` suma `--lnte` y `--demux` (valida el formato y mide cuadros por segundo y tasa de bits).
+- 2026-11-15 · Fase 1: CI en verde (run 43759257697): 30 pruebas XCTest pasadas (AnnexB, protocolo y selección de formato), IPA sin firmar de 75.419 bytes. Pre-release `v0.2.0-fase1`. Falta la prueba guiada con Manuel (ffplay 10 minutos y delay a ojo).
