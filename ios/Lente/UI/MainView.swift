@@ -1,7 +1,7 @@
 import AVFoundation
 import SwiftUI
 
-/// Camera permission state. Phase 0 only asks for it; capture starts in Phase 1.
+/// Camera permission state.
 final class CameraPermission: ObservableObject {
     @Published private(set) var status = AVCaptureDevice.authorizationStatus(for: .video)
 
@@ -17,7 +17,7 @@ final class CameraPermission: ObservableObject {
 }
 
 struct MainView: View {
-    @EnvironmentObject private var probe: ProbeServer
+    @EnvironmentObject private var server: StreamServer
     @EnvironmentObject private var camera: CameraPermission
 
     var body: some View {
@@ -36,7 +36,7 @@ struct MainView: View {
                     Button("Permitir la cámara") { camera.request() }
                         .buttonStyle(.borderedProminent)
                 }
-                Text("Prueba de la Fase 0 · puerto 27183")
+                Text("Conectá el cable y abrí Lente en la computadora")
                     .font(.footnote)
                     .foregroundStyle(.secondary)
             }
@@ -44,16 +44,17 @@ struct MainView: View {
             .padding(32)
         }
         .onAppear {
-            probe.start()
+            server.start()
             if camera.status == .notDetermined { camera.request() }
         }
     }
 
     private var statusText: String {
-        switch probe.state {
+        switch server.state {
         case .stopped: return "Detenido"
         case .waiting: return "Esperando la computadora"
-        case .connected: return "Conectado · \(probe.bytesSent) bytes enviados"
+        case .configuring: return "Preparando la cámara"
+        case .streaming(let detail): return "Transmitiendo\n\(detail)\n\(server.framesSent) cuadros"
         case .failed(let detail): return "Error: \(detail)"
         }
     }
