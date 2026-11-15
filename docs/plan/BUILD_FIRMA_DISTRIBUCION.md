@@ -58,15 +58,27 @@ SideStore firma la IPA en el iPhone con el Apple ID de Manuel.
 
 **Regla:** las credenciales del Apple ID las escribe solo Manuel. Ningún agente pide, guarda ni teclea contraseñas, códigos ni datos de cuenta (memoria «celular automatizado sin registros»).
 
-Verificar en la Fase 0 el procedimiento vigente en la documentación oficial de SideStore (`docs.sidestore.io`) y escribirlo en este documento paso a paso con capturas, porque cambia con las versiones de iOS. Esquema esperado:
+Procedimiento verificado el 2026-11-15 en `docs.sidestore.io` (páginas «Prerequisites» e «Install»), para iOS 26. Se usa un **Apple ID gratis aparte**, creado solo para firmar (D1).
 
-1. En la PC: la herramienta oficial de instalación de SideStore (hoy «iLoader», para Windows y Linux) instala SideStore en el iPhone por el cable y genera el archivo de emparejamiento.
-2. En el iPhone: Ajustes › Privacidad y seguridad › **Modo desarrollador** activado (iOS 16 o superior), reinicio y confirmación.
-3. Confiar en el perfil de desarrollador (Ajustes › General › VPN y gestión de dispositivos).
-4. Instalar desde la App Store la VPN local gratuita que pide SideStore para renovar sin la PC (hoy «LocalDevVPN»; verificar).
-5. En SideStore: agregar la fuente de Lente (URL del `sidestore-source.json` del repositorio) e instalar Lente.
-6. Renovación: SideStore renueva las apps antes de los 7 días. Dejar armada una automatización de Atajos de iOS (por ejemplo, todos los días a las 9 o al conectar el cargador) que ejecute la renovación de SideStore. Verificar el nombre exacto de la acción.
-7. Actualizaciones: cuando sale una versión nueva, aparece en SideStore y se actualiza desde el iPhone. No hace falta la PC.
+Preparación (una sola vez):
+
+1. En el iPhone: desbloqueo con código activado. Instalar **LocalDevVPN** desde la App Store (gratis) y tocar «Connect»; aceptar «Permitir configuraciones de VPN». Esta VPN tiene que estar conectada cada vez que SideStore instala, actualiza o renueva.
+2. En Windows: instalar **iTunes descargado directo de Apple** (`apple.com/itunes/download/win64`), que trae Apple Mobile Device Service. SideStore lo recomienda por encima de la versión de Microsoft Store y de la app Apple Devices (esa queda como alternativa si iTunes falla). Lente usa el mismo servicio, así que con eso alcanza para las dos cosas.
+3. En Windows: instalar **iloader** (`github.com/nab138/iloader`, instalador MSI x64). En Fedora: `usbmuxd` y el RPM de iloader.
+
+Instalación de SideStore:
+
+4. Conectar el iPhone por cable; si pregunta, «Confiar» y el código.
+5. Abrir iloader, iniciar sesión con el Apple ID aparte (lo escribe Manuel; distingue mayúsculas), elegir el iPhone y «Install SideStore (Stable)».
+6. En el iPhone: Ajustes › General › VPN y gestión de dispositivos › la cuenta › «Confiar» › «Permitir y reiniciar», con el código.
+7. Ajustes › Privacidad y seguridad › **Modo desarrollador** activado; el iPhone se reinicia.
+8. LocalDevVPN › «Connect». Abrir SideStore, iniciar sesión con el mismo Apple ID, ir a «My Apps» y tocar el contador «7 DAYS» de SideStore para la primera renovación; si pregunta por el certificado, «Refresh Now».
+
+Instalación de Lente:
+
+9. Fase 0 a 5: descargar la IPA del pre-release en Safari del iPhone (se guarda en Archivos) y en SideStore › «My Apps» › «+» elegirla. Desde la Fase 6, por la fuente de SideStore (sección 4).
+10. Renovación: SideStore renueva las apps antes de los 7 días con LocalDevVPN conectada. Armar una automatización de Atajos de iOS (todos los días, o al conectar el cargador) con la acción de renovación de SideStore; verificar el nombre exacto de la acción al armarla con Manuel.
+11. El archivo de emparejamiento puede vencer al actualizar iOS o al azar; se reemplaza con la guía `docs.sidestore.io/docs/advanced/pairing-file`.
 
 Límites del Apple ID gratis, a respetar:
 

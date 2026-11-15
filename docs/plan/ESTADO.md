@@ -13,7 +13,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 
 | Fase | Estado | Compuerta pasada | Notas |
 |---|---|---|---|
-| 0 · Cimientos y pruebas de riesgo | En curso | | D1 a D4 confirmadas; repo y app mínima listos; espera Apple Devices y la instalación por SideStore |
+| 0 · Cimientos y pruebas de riesgo | En curso | | Repo público, CI de iOS en verde, IPA en pre-release; espera la prueba guiada con Manuel (iTunes, SideStore, sonda) |
 | 1 · Servidor iOS | Pendiente | | |
 | 2 · Cliente PC | Pendiente | | |
 | 3 · Controles y telemetría | Pendiente | | |
@@ -31,7 +31,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 | Cuadros promedio 1080p60, 30 min | 59,5 o más | | |
 | CPU PC 1080p60 (GPU / software) | 8% o menos con GPU | | |
 | Batería iPhone por hora, 1080p60 | 10% o menos | | |
-| Tamaño IPA | menos de 2 MB | | |
+| Tamaño IPA | menos de 2 MB | 29.183 bytes (app mínima de la Fase 0) | 2026-11-15 |
 | Arranque hasta imagen | 3 s o menos | | |
 | Reconexión | 3 s o menos | | |
 
@@ -59,3 +59,6 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Fase 0: app mínima (pantalla «Hola», permiso de cámara, sonda en `127.0.0.1:27183` que manda `LENTE-F0` más un contador cada 50 ms), prueba XCTest y workflow `lente-ios.yml` escritos. Sin compilar todavía: el CI necesita el repo publicado (D2).
 - 2026-11-15 · Fase 0: laptop sin Apple Mobile Device Service (`usbmux_probe.py --listar` responde «Instalá Apple Devices»). Falta que Manuel lo instale.
 - 2026-11-15 · Fase 0: Manuel confirmó D1 a D4 en un solo mensaje. «Lente» libre en GitHub (`lionegmanuel/lente` no existía).
+- 2026-11-15 · Fase 0: repo publicado en `github.com/lionegmanuel/lente` (D2). Ramas `main` y `fase-0-cimientos`.
+- 2026-11-15 · Fase 0: primer CI de iOS en verde (run 43741142940): Xcode 16.4 en macOS 15.8.2, 2 pruebas XCTest pasadas en simulador, IPA sin firmar de 29.183 bytes. Pre-release `v0.1.0-fase0` con la IPA.
+- 2026-11-15 · Fase 0: procedimiento de SideStore verificado en `docs.sidestore.io` y escrito en `BUILD_FIRMA_DISTRIBUCION.md` §3. Cambio: en Windows, iTunes directo de Apple en lugar de Apple Devices (lo pide iloader; Apple Devices queda de alternativa).
