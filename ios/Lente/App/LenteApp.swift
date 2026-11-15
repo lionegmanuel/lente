@@ -3,13 +3,13 @@ import SwiftUI
 @main
 struct LenteApp: App {
     @Environment(\.scenePhase) private var scenePhase
-    @StateObject private var probe = ProbeServer()
+    @StateObject private var server = StreamServer()
     @StateObject private var camera = CameraPermission()
 
     var body: some Scene {
         WindowGroup {
             MainView()
-                .environmentObject(probe)
+                .environmentObject(server)
                 .environmentObject(camera)
         }
         .onChange(of: scenePhase) { phase in
@@ -17,10 +17,10 @@ struct LenteApp: App {
             case .active:
                 UIApplication.shared.isIdleTimerDisabled = true
                 camera.refresh()
-                probe.start()
+                server.start()
             case .background:
                 // iOS does not allow the camera in the background: release everything.
-                probe.stop()
+                server.stop()
                 UIApplication.shared.isIdleTimerDisabled = false
             default:
                 break
