@@ -16,6 +16,8 @@ Sin --raw ni --demux imprime cuantos bytes llegaron y los primeros bytes en hexa
 Solo biblioteca estandar. Windows: Apple Mobile Device Service en 127.0.0.1:27015.
 Linux: socket /var/run/usbmuxd. USBMUXD_SOCKET_ADDRESS sobrescribe ("UNIX:/ruta" o "host:puerto").
 """
+from __future__ import annotations
+
 import argparse
 import os
 import plistlib
@@ -46,7 +48,7 @@ def abrir_usbmuxd() -> socket.socket:
         if os.name == "nt":
             ayuda = "Instala iTunes descargado de apple.com y conecta el iPhone"
         else:
-            ayuda = "Instala usbmuxd (sudo dnf install usbmuxd) y conecta el iPhone"
+            ayuda = "Instala usbmuxd (bash tools/linux/instalar.sh) y conecta el iPhone"
         sys.exit(f"No pude abrir usbmuxd ({e}). {ayuda}.")
 
 

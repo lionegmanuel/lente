@@ -1,13 +1,21 @@
-"""Lente modo rapido: muestra la camara del iPhone en una ventana "Lente" para OBS.
+"""Lente modo rapido: la camara del iPhone por cable para OBS, en Windows y en Linux.
 
 Puente hasta que exista el cliente completo (Fase 2): abre una sesion LNTE por
-usbmux y pasa el Annex B a ffplay. Si se corta el cable o se cierra la app, la
-ventana queda abierta y reconecta sola cada segundo. Cerrar la ventana termina todo.
+usbmux y pasa el video H.264 (Annex B) a FFmpeg. Dos salidas:
+
+  * Ventana "Lente" (ffplay): para "Captura de ventana" en OBS. Es lo de Windows.
+  * Webcam virtual V4L2 (ffmpeg, --v4l2 /dev/video10): para "Dispositivo de captura
+    de video (V4L2)" en OBS. Es lo de Linux, en cualquier distro.
+
+Si se corta el cable o se cierra la app del iPhone, la salida queda abierta y
+reconecta sola cada segundo. Cerrar la ventana (o terminar el proceso) termina todo.
 
 Uso:
-    pythonw lente_rapido.py [--fps 30] [--mbps 24] [--girar]
+    pythonw lente_rapido.py [--fps 30] [--mbps 24] [--girar]           (Windows)
+    python3 lente_rapido.py --v4l2 /dev/video10 [--fps 30] [--girar]   (Linux)
 
-Necesita ffplay en el PATH (o LENTE_FFPLAY con la ruta).
+Necesita ffplay o ffmpeg en el PATH (o LENTE_FFPLAY / LENTE_FFMPEG con la ruta).
+Codigo de salida: 0 si se cerro normalmente, 2 si FFmpeg no pudo arrancar.
 """
 import argparse
 import os
@@ -21,16 +29,57 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import usbmux_probe as usbmux  # noqa: E402
 
 
-def ffplay_cmd(fps: int, girar: bool) -> list:
-    ruta = os.environ.get("LENTE_FFPLAY") or shutil.which("ffplay")
+def avisar(texto: str) -> None:
+    """stderr no existe con pythonw (Windows): ahi no se imprime nada."""
+    if sys.stderr is not None:
+        print(f"[lente {time.strftime('%H:%M:%S')}] {texto}", file=sys.stderr, flush=True)
+
+
+def programa(nombre: str, variable: str) -> str:
+    ruta = os.environ.get(variable) or shutil.which(nombre)
     if not ruta:
-        sys.exit("No encuentro ffplay. Instala FFmpeg o define LENTE_FFPLAY.")
-    cmd = [ruta, "-hide_banner", "-loglevel", "error", "-window_title", "Lente",
-           "-fflags", "nobuffer", "-flags", "low_delay", "-framedrop",
-           "-probesize", "32", "-analyzeduration", "0", "-framerate", str(fps)]
+        avisar(f"No encuentro {nombre}. Instala FFmpeg o define {variable}.")
+        sys.exit(2)
+    return ruta
+
+
+def entrada_h264(fps: int, ventana: bool) -> list:
+    # ffplay (ventana) mide el tiempo con su reloj: "nobuffer" y "low_delay" evitan que
+    # arrastre un retraso fijo; es la configuracion probada con el iPhone el 2026-11-15.
+    # ffmpeg hacia V4L2 escribe cada cuadro apenas lo decodifica: ahi esas opciones no
+    # bajan el delay y "nobuffer" tira el primer cuadro clave (2 s sin imagen al conectar).
+    rapido = ["-fflags", "nobuffer", "-flags", "low_delay"] if ventana else []
+    return rapido + ["-probesize", "32", "-analyzeduration", "0", "-framerate", str(fps),
+                     "-f", "h264", "-i", "pipe:0"]
+
+
+def ffplay_cmd(fps: int, girar: bool) -> list:
+    cmd = [programa("ffplay", "LENTE_FFPLAY"), "-hide_banner", "-loglevel", "error",
+           "-window_title", "Lente", "-framedrop"] + entrada_h264(fps, ventana=True)
     if girar:
         cmd += ["-vf", "hflip,vflip"]
-    return cmd + ["-f", "h264", "-i", "-"]
+    return cmd
+
+
+def soporta(ffmpeg: str, opciones: list) -> bool:
+    prueba = [ffmpeg, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+              "color=size=16x16:rate=1", "-frames:v", "1"] + opciones + ["-f", "null", "-"]
+    try:
+        return subprocess.run(prueba, capture_output=True, timeout=20).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
+def ffmpeg_v4l2_cmd(fps: int, girar: bool, dispositivo: str) -> list:
+    ffmpeg = programa("ffmpeg", "LENTE_FFMPEG")
+    # Sin duplicar ni tirar cuadros: cada cuadro del iPhone sale tal cual (FFmpeg 5.1+ o anterior)
+    sincronia = ["-fps_mode", "passthrough"] if soporta(ffmpeg, ["-fps_mode", "passthrough"]) else ["-vsync", "passthrough"]
+    # Decodifica con la placa si se puede (VA-API, CUDA...); si no, FFmpeg sigue por software solo
+    acelerado = ["-hwaccel", "auto"] if os.environ.get("LENTE_SIN_GPU") != "1" else []
+    cmd = [ffmpeg, "-hide_banner", "-loglevel", "error", "-nostdin"] + acelerado + entrada_h264(fps, ventana=False)
+    if girar:
+        cmd += ["-vf", "hflip,vflip"]
+    return cmd + sincronia + ["-pix_fmt", "yuv420p", "-f", "v4l2", dispositivo]
 
 
 def transmitir(tunel, destino) -> None:
@@ -40,39 +89,60 @@ def transmitir(tunel, destino) -> None:
     while True:
         cabecera = usbmux.leer_exacto(tunel, 12)
         if cabecera[0] & 0x80:
-            continue  # paquete de sesion (ancho y alto)
+            ancho, alto = struct.unpack(">II", cabecera[4:])
+            avisar(f"Transmitiendo {ancho}x{alto}")
+            continue
         _banderas, largo = struct.unpack(">QI", cabecera)
         destino.write(usbmux.leer_exacto(tunel, largo))
         destino.flush()
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--fps", type=int, default=30, help="igual que los cuadros de OBS")
-    ap.add_argument("--mbps", type=int, default=24, help="tasa de bits del iPhone")
-    ap.add_argument("--codec", choices=["h264", "h265"], default="h264")
+    ap = argparse.ArgumentParser(description="Lente modo rapido: camara del iPhone por cable para OBS")
+    ap.add_argument("--fps", type=int, default=30, help="cuadros por segundo, igual que OBS (30)")
+    ap.add_argument("--mbps", type=int, default=24, help="tasa de bits del iPhone (24)")
     ap.add_argument("--girar", action="store_true", help="da vuelta la imagen 180 grados")
+    ap.add_argument("--v4l2", metavar="DISPOSITIVO", help="Linux: escribe en la webcam virtual (ej. /dev/video10)")
     a = ap.parse_args()
-    if a.codec == "h265":
-        sys.exit("El modo rapido solo muestra H.264.")
 
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-    ffplay = subprocess.Popen(ffplay_cmd(a.fps, a.girar), stdin=subprocess.PIPE, creationflags=flags)
-    parametros = f"camera_fps={a.fps},video_codec={a.codec},video_bit_rate={a.mbps * 1_000_000}"
-    while ffplay.poll() is None:
+    if a.v4l2:
+        if not os.access(a.v4l2, os.W_OK):
+            avisar(f"No puedo escribir en {a.v4l2}: falta v4l2loopback o el grupo video (ver docs/MODO_RAPIDO.md).")
+            sys.exit(2)
+        cmd = ffmpeg_v4l2_cmd(a.fps, a.girar, a.v4l2)
+    else:
+        cmd = ffplay_cmd(a.fps, a.girar)
+    salida = subprocess.Popen(cmd, stdin=subprocess.PIPE, creationflags=flags)
+    avisar(f"Salida: {a.v4l2 or 'ventana Lente'} · esperando el iPhone con Lente abierta")
+
+    parametros = f"camera_fps={a.fps},video_codec=h264,video_bit_rate={a.mbps * 1_000_000}"
+    ultimo_aviso = ""
+    while salida.poll() is None:
         tunel = None
         try:
             dispositivo = usbmux.elegir(usbmux.listar(), None)
             tunel = usbmux.conectar(dispositivo, 27183)
             usbmux.abrir_sesion(tunel, parametros)
             usbmux.leer_respuesta(tunel)
-            transmitir(tunel, ffplay.stdin)
-        except (SystemExit, ConnectionError, OSError):
-            pass
+            ultimo_aviso = ""
+            transmitir(tunel, salida.stdin)
+        except SystemExit as e:
+            texto = str(e.code) if e.code not in (None, 0, 1) else "sin sesion"
+            if texto != ultimo_aviso:
+                avisar(f"Esperando: {texto}")
+                ultimo_aviso = texto
+        except (ConnectionError, OSError) as e:
+            if salida.poll() is None:
+                avisar(f"Conexion cortada ({e.__class__.__name__}), reconectando")
         finally:
             if tunel is not None:
                 tunel.close()
         time.sleep(1)
+
+    codigo = salida.returncode
+    avisar(f"FFmpeg termino (codigo {codigo})")
+    sys.exit(0 if codigo in (0, None) or a.v4l2 is None else 2)
 
 
 if __name__ == "__main__":
