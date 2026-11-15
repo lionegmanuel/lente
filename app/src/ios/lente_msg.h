@@ -9,6 +9,10 @@
 
 #include "server.h"
 
+#ifndef LENTE_VERSION
+# define LENTE_VERSION "1.0.0"
+#endif
+
 // Lente session opening (LNTE) and control opening (LNTC).
 // See docs/plan/ARQUITECTURA_Y_PROTOCOLO.md section 5. Big endian.
 

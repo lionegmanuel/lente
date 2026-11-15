@@ -183,3 +183,25 @@ jobs:
         with:
           name: lente-pc-linux-x86_64-dist
           path: lente-pc-linux-dist.tar.gz
+
+  paquetes:
+    needs: [windows, linux, servidor-android]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artefactos
+      - name: Armar Lente-PC para Windows y Linux
+        run: bash tools/release/empaquetar_pc.sh artefactos paquetes
+      - name: El paquete de Linux arranca (version)
+        run: |
+          mkdir prueba && tar -xzf paquetes/Lente-PC-linux-x86_64.tar.gz -C prueba
+          ./prueba/*/lente --version | tee version.log
+          grep -q "^Lente " version.log
+          echo "$(head -1 version.log)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lente-PC
+          path: paquetes/

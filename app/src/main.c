@@ -11,6 +11,7 @@
 #include "events.h"
 #include "options.h"
 #include "scrcpy.h"
+#include "ios/lente_msg.h"
 #ifdef HAVE_USB
 # include "usb/scrcpy_otg.h"
 #endif
@@ -33,8 +34,8 @@ main_scrcpy(int argc, char *argv[]) {
     setbuf(stderr, NULL);
 #endif
 
-    printf("scrcpy " SCRCPY_VERSION
-           " <https://github.com/Genymobile/scrcpy>\n");
+    printf("Lente " LENTE_VERSION " <https://github.com/lionegmanuel/lente>, "
+           "based on scrcpy " SCRCPY_VERSION " by Genymobile (Apache 2.0)\n");
 
     struct scrcpy_cli_args args = {
         .opts = scrcpy_options_default,
