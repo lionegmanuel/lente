@@ -13,7 +13,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 
 | Fase | Estado | Compuerta pasada | Notas |
 |---|---|---|---|
-| 0 · Cimientos y pruebas de riesgo | En curso | | Repo público, CI de iOS en verde, IPA en pre-release; espera la prueba guiada con Manuel (iTunes, SideStore, sonda) |
+| 0 · Cimientos y pruebas de riesgo | Terminada | 2026-11-15 | IPA de CI instalada por SideStore, bytes del iPhone recibidos en la laptop por el cable, iOS 26.6. Fedora queda para la Fase 2 |
 | 1 · Servidor iOS | Pendiente | | |
 | 2 · Cliente PC | Pendiente | | |
 | 3 · Controles y telemetría | Pendiente | | |
@@ -32,6 +32,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 | CPU PC 1080p60 (GPU / software) | 8% o menos con GPU | | |
 | Batería iPhone por hora, 1080p60 | 10% o menos | | |
 | Tamaño IPA | menos de 2 MB | 29.183 bytes (app mínima de la Fase 0) | 2026-11-15 |
+| Sonda por cable, Windows (Fase 0) | bytes íntegros | 7.236 bytes en unos 30 s, 603 bloques `LENTE-F0` con contador 0 a 602 sin saltos | 2026-11-15 |
 | Arranque hasta imagen | 3 s o menos | | |
 | Reconexión | 3 s o menos | | |
 
@@ -63,3 +64,6 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Fase 0: primer CI de iOS en verde (run 43741142940): Xcode 16.4 en macOS 15.8.2, 2 pruebas XCTest pasadas en simulador, IPA sin firmar de 29.183 bytes. Pre-release `v0.1.0-fase0` con la IPA.
 - 2026-11-15 · Fase 0: procedimiento de SideStore verificado en `docs.sidestore.io` y escrito en `BUILD_FIRMA_DISTRIBUCION.md` §3. Cambio: en Windows, iTunes directo de Apple en lugar de Apple Devices (lo pide iloader; Apple Devices queda de alternativa).
 - 2026-11-15 · Fase 0: en la laptop, iTunes e iloader 2.4.1 instalados; iloader ve el iPhone (iOS 26.6) por USB. Con el Apple ID aparte, sin dispositivo de confianza, el código llega solo por SMS e iloader falla con «Cannot submit code without knowing which method to use» (`isideload/src/auth/apple_account.rs:329`; mismo caso en `nab138/iloader#1162`, abierto). Manuel cambia D1: se firma con su Apple ID de siempre, cuyo código llega al iPhone como notificación.
+- 2026-11-15 · Fase 0: SideStore instalado con iloader (Apple ID de siempre), Modo desarrollador activado, LocalDevVPN conectada y primera renovación hecha. Lente `v0.1.0-fase0` instalada desde SideStore («Sideloaded», vence en 7 días); quedan 9 identificadores de app esta semana.
+- 2026-11-15 · Fase 0: `usbmux_probe.py --listar` ve el iPhone (DeviceID 3, USB, ProductID 4776, iOS 26.6). Con Lente cerrada, usbmuxd responde 3 (conexión rechazada); con Lente abierta, `--conectar 27183` recibe 603 bloques íntegros. Riesgo R1: anda con el iPhone ya en «Confiar» con la laptop; sin confianza no se probó.
+- 2026-11-15 · Compuerta de la Fase 0 pasada. Línea de base con Android: no hay uno a mano, se toma la meta del plan (sección 5). Fedora queda para la Fase 2.
