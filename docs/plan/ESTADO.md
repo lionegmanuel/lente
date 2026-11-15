@@ -14,7 +14,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 | Fase | Estado | Compuerta pasada | Notas |
 |---|---|---|---|
 | 0 · Cimientos y pruebas de riesgo | Terminada | 2026-11-15 | IPA de CI instalada por SideStore, bytes del iPhone recibidos en la laptop por el cable, iOS 26.6. Fedora queda para la Fase 2 |
-| 1 · Servidor iOS | Pendiente | | |
+| 1 · Servidor iOS | Terminada | 2026-11-15 | 1920x1080 a 60 cuadros, H.264 High, 15-16 Mbps, cuadro clave cada 2 s, BT.709; Manuel la vio en ffplay y la aprobó. Prueba de pocos minutos, no de 10 (decisión de Manuel para grabar al día siguiente) |
 | 2 · Cliente PC | Pendiente | | |
 | 3 · Controles y telemetría | Pendiente | | |
 | 4 · Robustez | Pendiente | | |
@@ -70,3 +70,5 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Fase 0, respuestas de Manuel: Lente abrió, pidió la cámara y el permiso quedó concedido; después de la sonda vuelve a «Esperando la computadora» (correcto). El iPhone no mostró ningún aviso durante la conexión (riesgo R1: con el iPhone en «Confiar», conectar a un puerto no pide nada).
 - 2026-11-15 · Fase 1: rama `fase-1-servidor-ios`. App 0.2.0: cámara física con formato `420v` elegido por tamaño y cuadros, estabilización y HDR apagados; `VTCompressionSession` con control de tasa de baja latencia, sin cuadros B; AVCC a Annex B; servidor LNTE con el formato de scrcpy 4.1 (respuesta, nombre del modelo, códec, paquete de sesión, encabezados de 12 bytes) y `raw_stream`; descarte de cuadros no clave con más de 2 envíos pendientes. La conexión de control se acepta y se ignora hasta la Fase 3. `usbmux_probe.py` suma `--lnte` y `--demux` (valida el formato y mide cuadros por segundo y tasa de bits).
 - 2026-11-15 · Fase 1: CI en verde (run 43759257697): 30 pruebas XCTest pasadas (AnnexB, protocolo y selección de formato), IPA sin firmar de 75.419 bytes. Pre-release `v0.2.0-fase1`. Falta la prueba guiada con Manuel (ffplay 10 minutos y delay a ojo).
+- 2026-11-15 · Fase 1, prueba guiada en Windows: `--demux` valida el formato (LNTE OK, «iPhone 15 Pro Max», h264, sesión 1920x1080, configuración de 33 bytes) a 58-60 cuadros/s y 14,7-15,9 Mbps; 710 cuadros en 12 s decodificados por FFmpeg sin errores. Manuel: «se ve bien», delay natural al hablar y gesticular (sin número medido). Con el iPhone horizontal y el cable hacia la PC, la imagen sale girada 180 grados.
+- 2026-11-15 · Puente para grabar mientras se hace la Fase 2: `tools/lente_rapido.py` (ffplay en una ventana «Lente», reconecta solo) y acceso directo «Webcam iPhone» en el escritorio de la laptop con `--girar`. Manuel decidió seguir de noche con las fases 2 a 5 sin pruebas intermedias y hacer una sola prueba final.

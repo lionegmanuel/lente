@@ -202,7 +202,7 @@ def main() -> None:
         if a.demux:
             try:
                 demux(tunel, pares, a.segundos if a.segundos != 10.0 else 0)
-            except (ConnectionError, BrokenPipeError):
+            except (ConnectionError, OSError):
                 print("Conexion cerrada.", file=sys.stderr)
             return
     if a.raw:
