@@ -77,7 +77,7 @@ Instalación de SideStore:
 Instalación de Lente:
 
 9. Fase 0 a 5: descargar la IPA del pre-release en Safari del iPhone (se guarda en Archivos) y en SideStore › «My Apps» › «+» elegirla. Desde la Fase 6, por la fuente de SideStore (sección 4).
-10. Renovación: SideStore renueva las apps antes de los 7 días con LocalDevVPN conectada. Armar una automatización de Atajos de iOS (todos los días, o al conectar el cargador) con la acción de renovación de SideStore; verificar el nombre exacto de la acción al armarla con Manuel.
+10. Renovación: SideStore renueva las apps antes de los 7 días con LocalDevVPN conectada. Automatización de Atajos diaria (Configurar VPN LocalDevVPN Conectar · Abrir app SideStore · Esperar 5 s · Refresh All Apps): pasos, prueba y fallas en `docs/MANTENIMIENTO_IPHONE_Y_PC.md`. Pendiente de armar con Manuel.
 11. El archivo de emparejamiento puede vencer al actualizar iOS o al azar; se reemplaza con la guía `docs.sidestore.io/docs/advanced/pairing-file`.
 
 Límites del Apple ID gratis, a respetar:

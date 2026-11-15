@@ -20,7 +20,7 @@ Estado al 2026-11-15: probado con el iPhone 15 Pro Max de Manuel en Windows 10 (
 Ya está hecho en el iPhone de Manuel; se repite solo en un iPhone nuevo.
 
 1. La app **Lente** instalada con SideStore (`docs/plan/BUILD_FIRMA_DISTRIBUCION.md` §3). Versión actual: `v0.2.0-fase1` en `github.com/lionegmanuel/lente/releases`.
-2. **Cada 7 días** hay que renovar: en el iPhone, LocalDevVPN conectada, SideStore › My Apps › tocar el contador de días. Si pasan 7 días sin renovar, Lente no abre hasta renovar (no se pierde nada).
+2. **Cada 7 días** hay que renovar la firma. Se automatiza una sola vez con Atajos y después es solo (pendiente de Manuel): pasos en [MANTENIMIENTO_IPHONE_Y_PC.md](MANTENIMIENTO_IPHONE_Y_PC.md). A mano: LocalDevVPN conectada, SideStore › My Apps › tocar el contador de días. Si pasan 7 días sin renovar, Lente no abre hasta renovar (no se pierde nada).
 3. Para usarla: **Lente abierta en pantalla** y el iPhone conectado por cable. La app no deja que se apague la pantalla mientras está abierta. Si se va a otra app o se bloquea, la cámara se corta y vuelve sola al abrir Lente de nuevo.
 4. **La primera vez en una PC nueva**, el iPhone pregunta «¿Confiar en esta computadora?»: tocar **Confiar** y poner el código.
 
