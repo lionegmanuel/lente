@@ -7,10 +7,10 @@ Cada paso indica dónde se hace: 📱 en el iPhone, 💻 en la PC.
 ## Pendientes (marcar al hacerlos)
 
 - [ ] **Renovación automática de Lente** con una automatización de Atajos (sección 1). Hasta que esté hecha, renovar a mano antes del vencimiento (sección 2).
-- [ ] **Desinstalar iloader** de la laptop (sección 4).
+- [ ] **Desinstalar iloader** de la laptop (sección 4), **recién cuando la renovación automática ya ande**: si Lente y SideStore se vencen, iloader es lo que los rescata.
 - [ ] Opcional: sacar **iTunesHelper** del inicio de Windows (sección 4).
 
-**Fechas:** Lente se instaló el 2026-11-15 y vence el **2026-11-22** si no se renueva. Cada renovación suma 7 días desde ese momento.
+**Fechas:** Lente y SideStore se instalaron el 2026-11-15 y **los dos vencen el 2026-11-22** si no se renuevan (SideStore está firmado con la misma cuenta gratis). Cada renovación suma 7 días desde ese momento.
 
 ---
 
@@ -71,7 +71,14 @@ Mientras no esté la automatización, o si falla:
 3. 📱 Tocar el contador de días al lado de **Lente** (y al lado de **SideStore**). Si pregunta por el certificado, **Refresh Now**.
 4. 📱 Tiene que quedar en **7 DAYS**.
 
-Si Lente ya venció (no abre), es lo mismo: renovar desde SideStore. No hay que reinstalar ni se pierde nada.
+### Si se pasó la fecha
+
+| Caso | Qué pasa | Cómo se arregla |
+|---|---|---|
+| Venció solo Lente (SideStore abre) | Lente no abre | Renovar desde SideStore como arriba. No se reinstala nada |
+| **Vencieron Lente y SideStore** (lo normal, vencen el mismo día) | Ninguna de las dos abre, y desde el iPhone no se puede renovar | 💻 Reinstalar SideStore desde la PC con **iloader** (Windows o Linux), como la primera vez: `docs/plan/BUILD_FIRMA_DISTRIBUCION.md` §3, pasos 4 a 8. Después, 📱 SideStore › My Apps › renovar Lente. Lente sigue instalada: no hace falta volver a bajarla. Unos 10 minutos |
+
+En ningún caso se pierde nada: Lente no guarda datos en el iPhone.
 
 ## 3. Límites de la cuenta gratis
 
@@ -85,14 +92,14 @@ Si Lente ya venció (no abre), es lo mismo: renovar desde SideStore. No hay que 
 
 | Programa | ¿Desinstalar? | Por qué |
 |---|---|---|
-| **iloader** | **Sí** | Solo sirvió para instalar SideStore la primera vez. Se vuelve a bajar (`github.com/nab138/iloader/releases`, el `x64.msi`) únicamente si hay que reinstalar SideStore o cambiar el archivo de emparejamiento. |
+| **iloader** | **Sí, pero recién cuando la renovación automática ande** | Sirvió para instalar SideStore la primera vez y es lo que lo rescata si Lente y SideStore se vencen. Con la renovación diaria andando, ya no hace falta tenerlo instalado: si algún día se necesita, se vuelve a bajar (`github.com/nab138/iloader/releases`, el `x64.msi`). |
 | **iTunes** | **No** | Instala «Apple Mobile Device Service», el servicio que deja a Lente hablar con el iPhone por el cable en Windows. Sin él, «Webcam iPhone» deja de andar. iTunes en sí nunca hace falta abrirlo. |
 | Apple Mobile Device Support, Apple Application Support | **No** | Son partes de iTunes que usa el servicio. |
 | FFmpeg, Python | **No** | Los usa «Webcam iPhone» (ffplay y `lente_rapido.py`). |
 
 Pasos:
 
-1. 💻 **Desinstalar iloader:** Configuración › Aplicaciones › Aplicaciones y características › buscar **iloader** › **Desinstalar**.
+1. 💻 **Desinstalar iloader** (solo con la renovación automática ya probada): Configuración › Aplicaciones › Aplicaciones y características › buscar **iloader** › **Desinstalar**.
 2. 💻 **Opcional, iTunesHelper:** Administrador de tareas (Ctrl+Mayús+Esc) › pestaña **Inicio** › **iTunesHelper** › **Deshabilitar**. Evita que arranque con Windows; el servicio que usa Lente sigue funcionando igual.
 3. 💻 Comprobar que todo sigue bien: Lente abierta en el iPhone, cable y doble clic en **Webcam iPhone**. Tiene que aparecer la ventana con la cámara.
 
