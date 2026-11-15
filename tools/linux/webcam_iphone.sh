@@ -9,6 +9,11 @@
 #   webcam_iphone.sh --ventana       muestra una ventana "Lente" en lugar de la webcam virtual
 #                                    (para mirar la camara sin OBS)
 #   webcam_iphone.sh --fps 60        fuerza los cuadros (si no, usa los de OBS; si no los encuentra, 30)
+#   webcam_iphone.sh --rapido        usa el modo rapido (ffmpeg) aunque este Lente para la PC
+#
+# Con Lente para la PC instalado (lente, tools/linux/instalar.sh lo baja al disco de datos)
+# usa el cliente completo: reconexion, controles y telemetria. Si no arranca (por ejemplo,
+# la app del iPhone es anterior a 1.0 y no rota la imagen), pasa solo al modo rapido.
 #   webcam_iphone.sh --apagar        apaga
 #   webcam_iphone.sh --estado        dice si esta prendida
 #
@@ -37,16 +42,18 @@ mkdir -p "$LOGDIR"
 
 GIRAR="--girar"
 VENTANA=false
+RAPIDO=false
 FPS=""
 ACCION="alternar"
 while [[ $# -gt 0 ]]; do
     case "$1" in
         --sin-girar) GIRAR="" ;;
         --ventana) VENTANA=true ;;
+        --rapido) RAPIDO=true ;;
         --fps) FPS="${2:-}"; shift ;;
         --apagar) ACCION="apagar" ;;
         --estado) ACCION="estado" ;;
-        -h|--help) sed -n '2,17p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
+        -h|--help) sed -n '2,23p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'; exit 0 ;;
         *) echo "Opcion desconocida: $1 (ver --help)"; exit 1 ;;
     esac
     shift
@@ -142,15 +149,46 @@ else
     DESTINO="$DISPOSITIVO"
 fi
 
-echo "[$(date '+%F %T')] Inicio: ${ARGS[*]}" >> "$LOG"
-# Proceso propio y en su grupo (setsid): sobrevive al cerrar la terminal y se apaga entero
-setsid "$PYTHON" "${TOOLS}/lente_rapido.py" "${ARGS[@]}" >> "$LOG" 2>&1 < /dev/null &
-PID=$!
-echo "$PID" > "$PIDFILE"
-sleep 3
-if ! kill -0 "$PID" 2>/dev/null; then
-    rm -f "$PIDFILE"
-    avisar "No arranco. Ultimas lineas de ${LOG}: $(tail -n 3 "$LOG" | tr '\n' ' ')"
-    exit 1
+# Lente para la PC (cliente completo): en el PATH o en el disco de datos
+LENTE_BIN="$(command -v lente || true)"
+if [[ -z "$LENTE_BIN" && -n "$DATOS" && -x "${DATOS}/lente-pc/actual/lente" ]]; then
+    LENTE_BIN="${DATOS}/lente-pc/actual/lente"
 fi
-avisar "Camara del iPhone prendida en ${DESTINO} a ${FPS} cuadros. Abri Lente en el iPhone. Otro clic la apaga."
+
+arrancar() {
+    # Proceso propio y en su grupo (setsid): sobrevive al cerrar la terminal y se apaga entero
+    echo "[$(date '+%F %T')] Inicio: $*" >> "$LOG"
+    setsid "$@" >> "$LOG" 2>&1 < /dev/null &
+    PID=$!
+    echo "$PID" > "$PIDFILE"
+}
+
+MODO="rapido"
+if [[ -n "$LENTE_BIN" ]] && ! $RAPIDO; then
+    MODO="completo"
+    CMD=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600)
+    [[ -n "$GIRAR" ]] && CMD+=(--capture-orientation=180)
+    if $VENTANA; then
+        CMD+=(--window-title=Lente)
+    else
+        CMD+=(--v4l2-sink="$DISPOSITIVO" --no-playback --no-window)
+    fi
+    arrancar "${CMD[@]}"
+    # Lente frena enseguida si no puede (app del iPhone vieja, sin iPhone...): modo rapido
+    sleep 6
+    if ! kill -0 "$PID" 2>/dev/null; then
+        rm -f "$PIDFILE"
+        echo "[$(date '+%F %T')] Lente para la PC no arranco, paso al modo rapido" >> "$LOG"
+        MODO="rapido"
+    fi
+fi
+if [[ "$MODO" == "rapido" ]]; then
+    arrancar "$PYTHON" "${TOOLS}/lente_rapido.py" "${ARGS[@]}"
+    sleep 3
+    if ! kill -0 "$PID" 2>/dev/null; then
+        rm -f "$PIDFILE"
+        avisar "No arranco. Ultimas lineas de ${LOG}: $(tail -n 3 "$LOG" | tr '\n' ' ')"
+        exit 1
+    fi
+fi
+avisar "Camara del iPhone prendida en ${DESTINO} a ${FPS} cuadros (modo ${MODO}). Abri Lente en el iPhone. Otro clic la apaga."
