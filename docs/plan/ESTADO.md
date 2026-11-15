@@ -4,7 +4,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 
 ## Decisiones de Manuel
 
-- [x] D1 · Firma gratis con SideStore y un Apple ID gratis aparte, creado solo para esto; Sideloadly de plan B (Manuel, 2026-11-15)
+- [x] D1 · Firma gratis con SideStore y el Apple ID de siempre de Manuel (cambio del 2026-11-15: el Apple ID aparte no pudo iniciar sesión en iloader, ver Registro); Sideloadly de plan B (Manuel, 2026-11-15)
 - [x] D2 · Repositorio público en GitHub, Apache 2.0 (Manuel, 2026-11-15)
 - [x] D3 · Nombre definitivo «Lente», Bundle ID `digital.velinex.lente` (Manuel, 2026-11-15)
 - [x] D4 · iPhone de Manuel con iOS 26; versión mínima de la app 16.0 (Manuel, 2026-11-15)
@@ -62,3 +62,4 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Fase 0: repo publicado en `github.com/lionegmanuel/lente` (D2). Ramas `main` y `fase-0-cimientos`.
 - 2026-11-15 · Fase 0: primer CI de iOS en verde (run 43741142940): Xcode 16.4 en macOS 15.8.2, 2 pruebas XCTest pasadas en simulador, IPA sin firmar de 29.183 bytes. Pre-release `v0.1.0-fase0` con la IPA.
 - 2026-11-15 · Fase 0: procedimiento de SideStore verificado en `docs.sidestore.io` y escrito en `BUILD_FIRMA_DISTRIBUCION.md` §3. Cambio: en Windows, iTunes directo de Apple en lugar de Apple Devices (lo pide iloader; Apple Devices queda de alternativa).
+- 2026-11-15 · Fase 0: en la laptop, iTunes e iloader 2.4.1 instalados; iloader ve el iPhone (iOS 26.6) por USB. Con el Apple ID aparte, sin dispositivo de confianza, el código llega solo por SMS e iloader falla con «Cannot submit code without knowing which method to use» (`isideload/src/auth/apple_account.rs:329`; mismo caso en `nab138/iloader#1162`, abierto). Manuel cambia D1: se firma con su Apple ID de siempre, cuyo código llega al iPhone como notificación.

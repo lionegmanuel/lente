@@ -58,7 +58,7 @@ SideStore firma la IPA en el iPhone con el Apple ID de Manuel.
 
 **Regla:** las credenciales del Apple ID las escribe solo Manuel. Ningún agente pide, guarda ni teclea contraseñas, códigos ni datos de cuenta (memoria «celular automatizado sin registros»).
 
-Procedimiento verificado el 2026-11-15 en `docs.sidestore.io` (páginas «Prerequisites» e «Install»), para iOS 26. Se usa un **Apple ID gratis aparte**, creado solo para firmar (D1).
+Procedimiento verificado el 2026-11-15 en `docs.sidestore.io` (páginas «Prerequisites» e «Install»), para iOS 26. Se firma con el **Apple ID de siempre de Manuel** (D1, cambio del 2026-11-15). Un Apple ID sin ningún dispositivo Apple de confianza recibe el código solo por SMS, y iloader 2.4.1 falla en ese caso («Cannot submit code without knowing which method to use», `nab138/iloader#1162`). Para quien instale Lente: usar un Apple ID que tenga iniciada sesión en algún iPhone, iPad o Mac.
 
 Preparación (una sola vez):
 
