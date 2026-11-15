@@ -8,3 +8,8 @@ build/
 /x/
 local.properties
 /scrcpy-server
+
+# Lente
+/ios/Lente.xcodeproj/
+/ios/Lente/Info.plist
+__pycache__/
