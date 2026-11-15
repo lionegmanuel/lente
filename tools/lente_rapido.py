@@ -5,7 +5,7 @@ usbmux y pasa el Annex B a ffplay. Si se corta el cable o se cierra la app, la
 ventana queda abierta y reconecta sola cada segundo. Cerrar la ventana termina todo.
 
 Uso:
-    pythonw lente_rapido.py [--fps 60] [--codec h264] [--girar]
+    pythonw lente_rapido.py [--fps 30] [--mbps 24] [--girar]
 
 Necesita ffplay en el PATH (o LENTE_FFPLAY con la ruta).
 """
@@ -48,7 +48,8 @@ def transmitir(tunel, destino) -> None:
 
 def main() -> None:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--fps", type=int, default=60)
+    ap.add_argument("--fps", type=int, default=30, help="igual que los cuadros de OBS")
+    ap.add_argument("--mbps", type=int, default=24, help="tasa de bits del iPhone")
     ap.add_argument("--codec", choices=["h264", "h265"], default="h264")
     ap.add_argument("--girar", action="store_true", help="da vuelta la imagen 180 grados")
     a = ap.parse_args()
@@ -57,7 +58,7 @@ def main() -> None:
 
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
     ffplay = subprocess.Popen(ffplay_cmd(a.fps, a.girar), stdin=subprocess.PIPE, creationflags=flags)
-    parametros = f"camera_fps={a.fps},video_codec={a.codec}"
+    parametros = f"camera_fps={a.fps},video_codec={a.codec},video_bit_rate={a.mbps * 1_000_000}"
     while ffplay.poll() is None:
         tunel = None
         try:
