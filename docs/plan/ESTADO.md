@@ -31,7 +31,7 @@ Lo actualiza el equipo al cerrar cada tarea y cada compuerta. Una línea por ava
 | Cuadros promedio 1080p60, 30 min | 59,5 o más | | |
 | CPU PC 1080p60 (GPU / software) | 8% o menos con GPU | | |
 | Batería iPhone por hora, 1080p60 | 10% o menos | | |
-| Tamaño IPA | menos de 2 MB | 75.419 bytes (app de la Fase 1) | 2026-11-15 |
+| Tamaño IPA | menos de 2 MB | 141.847 bytes (app 1.0.0 con ícono) | 2026-11-15 |
 | Sonda por cable, Windows (Fase 0) | bytes íntegros | 7.236 bytes en unos 30 s, 603 bloques `LENTE-F0` con contador 0 a 602 sin saltos | 2026-11-15 |
 | Arranque hasta imagen | 3 s o menos | | |
 | Reconexión | 3 s o menos | | |
@@ -81,3 +81,4 @@ Revisión del 2026-11-15 contra el tag `v4.1` (commit `2926c06`). Documentos cor
 - 2026-11-15 · Fase 4: puente en `ios_server.c` entre el iPhone y scrcpy (pares de sockets locales, también en Windows): si el iPhone se corta, la ventana, V4L2 y la grabación siguen y la sesión se reabre (mismo UDID; el id de usbmux cambia). PTS reescritos para que la grabación siga creciendo. Sockets descartados se cierran recién al final (en Windows cerrar libera). App: interrupciones de cámara y error de ejecución con aviso a la PC. La app manda su versión («ok lente/1.0.0»); con una app anterior y rotación pedida, el cliente frena y el lanzador pasa al modo rápido.
 - 2026-11-15 · Fase 6: `lente --version` («Lente 1.0.0, based on scrcpy 4.1 by Genymobile»), `tools/release/empaquetar_pc.sh` (lente.exe, servidor de Android, LEEME, NOTICE, lanzadores .vbs sin consola), `tools/release/fuente_sidestore.py`, ícono de la app. Paquetes: Windows 11,4 MB, Linux 17,8 MB.
 - 2026-11-15 · Fase 7: `tools/windows/webcam_iphone.ps1` y `tools/linux/webcam_iphone.sh` prueban Lente para la PC y, si no arranca, el modo rápido; los instaladores bajan el último release y verifican el SHA256 (Linux: `/mnt/d/lente-pc`). Acceso directo nuevo «Webcam iPhone (modo rápido)» en Windows. Pendiente: la prueba final con Manuel (`PRUEBAS_Y_ACEPTACION.md`, «Prueba final v1.0»).
+- 2026-11-15 · Release `v1.0.0` publicado (`github.com/lionegmanuel/lente/releases/tag/v1.0.0`): `Lente-v1.0.0.ipa` (141.847 bytes), `Lente-PC-windows-x64.zip`, `Lente-PC-linux-x86_64.tar.gz` y sus SHA256, desde las corridas de CI en `main` (43772928793 iOS, 43772928761 PC, todo en verde). Fuente de SideStore en `sidestore-source.json`. El enlace `releases/latest/download` que usan los instaladores responde.
