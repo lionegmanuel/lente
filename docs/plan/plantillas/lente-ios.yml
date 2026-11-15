@@ -1,0 +1,52 @@
+# Compila la app del iPhone sin Mac: pruebas en simulador e IPA sin firmar.
+# SideStore la firma en el iPhone. Repositorio publico: minutos de macOS gratis.
+name: Lente iOS
+
+on:
+  push:
+    paths: ["ios/**", ".github/workflows/lente-ios.yml"]
+  pull_request:
+    paths: ["ios/**"]
+  workflow_dispatch:
+
+jobs:
+  ios:
+    runs-on: macos-15
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Elegir Xcode estable
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Instalar XcodeGen
+        run: brew install xcodegen
+
+      - name: Generar proyecto
+        run: xcodegen generate --spec ios/project.yml
+
+      - name: Pruebas en simulador
+        run: |
+          SIM=$(xcrun simctl list devices available | grep -m1 -o "iPhone [0-9][0-9] Pro" || echo "iPhone 16")
+          xcodebuild test -project ios/Lente.xcodeproj -scheme Lente \
+            -destination "platform=iOS Simulator,name=$SIM" \
+            CODE_SIGNING_ALLOWED=NO | tail -n 50
+
+      - name: IPA sin firmar
+        run: |
+          xcodebuild -project ios/Lente.xcodeproj -scheme Lente -configuration Release \
+            -sdk iphoneos -destination 'generic/platform=iOS' \
+            -archivePath build/Lente.xcarchive archive \
+            CODE_SIGNING_ALLOWED=NO CODE_SIGNING_REQUIRED=NO CODE_SIGN_IDENTITY="" | tail -n 30
+          mkdir -p build/Payload
+          cp -R build/Lente.xcarchive/Products/Applications/Lente.app build/Payload/
+          (cd build && zip -qr Lente.ipa Payload)
+          ls -l build/Lente.ipa
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Lente-ipa
+          path: build/Lente.ipa
+          retention-days: 30

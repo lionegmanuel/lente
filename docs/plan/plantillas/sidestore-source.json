@@ -1,0 +1,36 @@
+{
+  "name": "Lente",
+  "identifier": "digital.velinex.lente.source",
+  "subtitle": "Tu iPhone como cámara de la PC, por cable",
+  "website": "https://github.com/{{USUARIO_GITHUB}}/lente",
+  "iconURL": "https://raw.githubusercontent.com/{{USUARIO_GITHUB}}/lente/main/ios/Lente/Resources/icono-1024.png",
+  "apps": [
+    {
+      "name": "Lente",
+      "bundleIdentifier": "digital.velinex.lente",
+      "developerName": "{{DESARROLLADOR}}",
+      "subtitle": "Tu iPhone como cámara de la PC, por cable",
+      "localizedDescription": "Convierte el iPhone en una cámara para Windows y Linux por cable USB, sin delay. Se usa junto con Lente para PC.",
+      "iconURL": "https://raw.githubusercontent.com/{{USUARIO_GITHUB}}/lente/main/ios/Lente/Resources/icono-1024.png",
+      "category": "utilities",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "buildVersion": "1",
+          "date": "2026-11-15",
+          "localizedDescription": "Versión de prueba de la Fase 0.",
+          "downloadURL": "https://github.com/{{USUARIO_GITHUB}}/lente/releases/download/v0.1.0/Lente-v0.1.0.ipa",
+          "size": 0,
+          "minOSVersion": "16.0"
+        }
+      ],
+      "appPermissions": {
+        "entitlements": [],
+        "privacy": {
+          "NSCameraUsageDescription": "Lente usa la cámara para mandar el video a tu computadora por el cable."
+        }
+      }
+    }
+  ],
+  "news": []
+}
