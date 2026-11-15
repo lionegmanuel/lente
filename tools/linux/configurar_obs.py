@@ -47,7 +47,8 @@ def correr(cmd: list) -> str:
 def instalaciones() -> list:
     """Carpetas de configuracion de cada OBS instalado (Flatpak y de la distro)."""
     dirs = []
-    if shutil.which("flatpak") and correr(["flatpak", "info", FLATPAK_ID]):
+    # "flatpak list" ve todas las instalaciones: usuario, sistema y la del disco de datos
+    if shutil.which("flatpak") and FLATPAK_ID in correr(["flatpak", "list", "--app", "--columns=application"]).split():
         dirs.append(("Flatpak", Path.home() / ".var/app" / FLATPAK_ID / "config/obs-studio"))
     if shutil.which("obs"):
         dirs.append(("distro", Path(os.environ.get("XDG_CONFIG_HOME", Path.home() / ".config")) / "obs-studio"))
@@ -94,11 +95,12 @@ def placa() -> str:
     return tipo
 
 
-def buscar_lut() -> str | None:
+def buscar_lut(datos: str | None) -> str | None:
     """El LUT vive en el repo VELINEX; se busca donde suele estar montado, sin recorrer todo el disco."""
     cola = f"Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/kitchen/{LUT_NOMBRE}"
     casa = str(Path.home())
-    patrones = [f"/mnt/*/Documents/MANUEL/VELINEX/{cola}", f"/run/media/*/*/Documents/MANUEL/VELINEX/{cola}",
+    patrones = [f"{datos}/Documents/MANUEL/VELINEX/{cola}"] if datos else []
+    patrones += [f"/mnt/*/Documents/MANUEL/VELINEX/{cola}", f"/run/media/*/*/Documents/MANUEL/VELINEX/{cola}",
                 f"/media/*/*/Documents/MANUEL/VELINEX/{cola}", f"{casa}/Documents/MANUEL/VELINEX/{cola}",
                 f"{casa}/*/Documents/MANUEL/VELINEX/{cola}", f"{casa}/VELINEX/{cola}", f"{casa}/*/VELINEX/{cola}",
                 f"{casa}/.var/app/{FLATPAK_ID}/config/obs-studio/luts/{LUT_NOMBRE}"]
@@ -232,6 +234,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--lut")
     ap.add_argument("--videos")
+    ap.add_argument("--datos", help="disco de datos (HDD): si el LUT esta ahi, OBS lo usa sin copiarlo")
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--dispositivo", default=os.environ.get("LENTE_V4L2", "/dev/video10"))
     ap.add_argument("--placa", choices=["amd", "nvidia", "intel", "otra"])
@@ -245,14 +248,15 @@ def main() -> None:
     if obs_abierto() and not a.simular:
         print("OBS esta abierto: cerrarlo y volver a correr (OBS pisa la configuracion al cerrarse).")
         sys.exit(1)
-    lut = a.lut or buscar_lut()
+    lut = a.lut or buscar_lut(a.datos)
     videos = Path(a.videos) if a.videos else carpeta_videos()
     tipo_placa = a.placa or placa()
     enc, enc_ajustes = codificador(tipo_placa)
     decir(f"Placa: {tipo_placa}")
     for tipo, base in dirs:
         lut_final = lut
-        if lut and not a.simular:
+        en_datos = bool(lut and a.datos and str(Path(lut).resolve()).startswith(str(Path(a.datos).resolve()).rstrip("/") + "/"))
+        if lut and not a.simular and not en_datos:
             # Copia del LUT junto a la configuracion: OBS lo encuentra aunque el disco de datos no este montado
             destino = base / "luts" / LUT_NOMBRE
             destino.parent.mkdir(parents=True, exist_ok=True)

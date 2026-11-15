@@ -14,7 +14,11 @@ TOOLS="$(cd "${AQUI}/.." && pwd)"
 DISPOSITIVO="${LENTE_V4L2:-/dev/video10}"
 CON_IPHONE=true
 [[ "${1:-}" == "--sin-iphone" ]] && CON_IPHONE=false
-if [[ -d /mnt/d/Temp ]]; then SALIDA="/mnt/d/Temp/lente"; else SALIDA="${TMPDIR:-/tmp}/lente"; fi
+DATOS=""
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/lente/lente.conf"
+[[ -f "$CONF" ]] && . "$CONF"
+[[ -z "$DATOS" && -d /mnt/d/Temp ]] && DATOS="/mnt/d"
+if [[ -n "$DATOS" && -d "$DATOS" ]]; then SALIDA="${DATOS}/Temp/lente"; else SALIDA="${TMPDIR:-/tmp}/lente"; fi
 mkdir -p "$SALIDA"
 
 GREEN='\033[0;32m'; RED='\033[0;31m'; YELLOW='\033[1;33m'; NC='\033[0m'
@@ -44,6 +48,11 @@ else
     mal "No existe ${DISPOSITIVO}: correr tools/linux/instalar.sh y reiniciar"
 fi
 if [[ -f "$HOME/.local/share/applications/lente-webcam-iphone.desktop" ]]; then bien "Acceso directo 'Webcam iPhone'"; else mal "Falta el acceso directo: correr tools/linux/instalar.sh"; fi
+if [[ -n "$DATOS" ]] && mountpoint -q "$DATOS" 2>/dev/null; then
+    bien "Disco de datos ${DATOS}: grabaciones en ${DATOS}/Videos, registros en ${SALIDA}"
+else
+    mal "Disco de datos sin montar (${DATOS:-ninguno}): lo pesado iria al disco del sistema. Montarlo y volver a correr instalar.sh"
+fi
 OBS_CFG=""
 for b in "$HOME/.var/app/com.obsproject.Studio/config/obs-studio" "${XDG_CONFIG_HOME:-$HOME/.config}/obs-studio"; do
     [[ -f "$b/basic/profiles/Lente_iPhone/basic.ini" && -f "$b/basic/scenes/Lente_iPhone.json" ]] && OBS_CFG="$b"

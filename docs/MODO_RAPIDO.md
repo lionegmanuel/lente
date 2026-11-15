@@ -71,14 +71,31 @@ Lo que hace falta y para qué:
 | `v4l2loopback` | La webcam virtual `/dev/video10` que lee OBS |
 | OBS Studio | Si no está, el instalador pone el Flatpak de Flathub (si hay Flatpak) o el de la distro |
 
+### Todo lo pesado va al disco de datos (HDD)
+
+Regla de Manuel: lo que pesa va al disco secundario, no al del sistema. En la PC con Fedora ese disco está montado en **`/mnt/d`** (el «D:» de Windows, con la misma estructura; ver `VELINEX/DEV & INFRAESTRUCTURA IA/Pase de Windows a Linux.md`).
+
+| Qué | Dónde queda |
+|---|---|
+| Repositorio de Lente | `/mnt/d/Documents/MANUEL/DEV/lente` |
+| OBS, si hay que instalarlo | Flatpak de Flathub en una instalación propia del disco de datos, `/mnt/d/flatpak` (se registra en `/etc/flatpak/installations.d/datos.conf`). Si el disco es NTFS, Flatpak no funciona ahí: OBS va por la distro, al sistema, unos 200 MB, y el instalador lo avisa |
+| Grabaciones de OBS | `/mnt/d/Videos` |
+| LUT | Se usa directo desde el repo VELINEX en `/mnt/d`, sin copias |
+| Registros y fotos de prueba | `/mnt/d/Temp/lente` |
+| Paquetes del sistema (usbmuxd, FFmpeg, módulo de la webcam virtual) | En el sistema: Linux no deja instalarlos en otro disco. Son unos cientos de MB; el instalador limpia la caché de descargas al terminar |
+| Configuración de OBS y de Lente | En la carpeta del usuario (archivos de texto chicos): `~/.config/obs-studio` o `~/.var/app/com.obsproject.Studio`, y `~/.config/lente/lente.conf` (dice dónde está el disco de datos) |
+
+Si el disco de datos no está montado, el instalador se frena con un error en lugar de llenar el disco del sistema. Para otro punto de montaje: `instalar.sh --datos /ruta/del/disco`.
+
 ### Paso a paso
 
-1. **Cerrar OBS** si está abierto.
-2. **Tener el repositorio.** Si el disco de datos está montado en `/mnt/d` con la misma estructura que en Windows, el repo ya está en `/mnt/d/Documents/MANUEL/DEV/lente` (hacer `git pull` ahí). Si no:
+1. **Cerrar OBS** si está abierto y comprobar el disco de datos: `ls /mnt/d/Documents/MANUEL` tiene que mostrar las carpetas de siempre.
+2. **Tener el repositorio en el disco de datos.** Si ya está en `/mnt/d/Documents/MANUEL/DEV/lente`, hacer `git pull` ahí. Si no:
    ```bash
-   git clone https://github.com/lionegmanuel/lente.git ~/lente
+   mkdir -p /mnt/d/Documents/MANUEL/DEV
+   git clone https://github.com/lionegmanuel/lente.git /mnt/d/Documents/MANUEL/DEV/lente
    ```
-   En adelante, `LENTE` es esa carpeta (por ejemplo `LENTE=/mnt/d/Documents/MANUEL/DEV/lente`).
+   En adelante, `LENTE=/mnt/d/Documents/MANUEL/DEV/lente`.
 3. **Ver qué va a hacer, sin tocar nada:**
    ```bash
    bash "$LENTE/tools/linux/instalar.sh" --simular
@@ -97,7 +114,7 @@ Lo que hace falta y para qué:
    ```bash
    bash "$LENTE/tools/linux/verificar.sh"
    ```
-   Revisa la instalación, que `usbmuxd` vea el iPhone, manda la cámara a `/dev/video10`, lee un cuadro real de ahí (lo mismo que hace OBS) y guarda la foto en `/mnt/d/Temp/lente/` (o en `/tmp/lente/` si no hay `/mnt/d`). Tiene que terminar en «Todo bien». Sin el iPhone: `verificar.sh --sin-iphone` revisa solo la instalación.
+   Revisa la instalación y el disco de datos, que `usbmuxd` vea el iPhone, manda la cámara a `/dev/video10`, lee un cuadro real de ahí (lo mismo que hace OBS) y guarda la foto en `/mnt/d/Temp/lente/`. Tiene que terminar en «Todo bien». Sin el iPhone: `verificar.sh --sin-iphone` revisa solo la instalación.
 7. **Abrir OBS:** tiene que abrir con el perfil y la escena «Lente iPhone» y mostrar la cámara. Si abre con otro, elegir «Lente iPhone» en los menús **Perfil** y **Colección de escenas**.
 
 ### Uso diario
@@ -111,20 +128,20 @@ Sigue andando aunque se desenchufe el cable o se cierre Lente en el iPhone: al v
 
 **Cuadros por segundo:** 30, igual que en la laptop (decisión de Manuel, 2026-11-15). El perfil «Lente iPhone» viene a 30 y el lanzador lee los cuadros del perfil activo de OBS (de la distro o Flatpak) y pide esos mismos al iPhone; si no los encuentra, usa 30. Para forzar otro valor: `webcam-iphone --fps 60`.
 
-Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--ventana` (muestra una ventana «Lente» para mirar sin OBS), `--estado`, `--apagar`. Variables: `LENTE_V4L2` (otro dispositivo), `LENTE_MBPS` (tasa, 24 por defecto). Registro: `~/.cache/lente/webcam_iphone.log`.
+Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--ventana` (muestra una ventana «Lente» para mirar sin OBS), `--estado`, `--apagar`. Variables: `LENTE_V4L2` (otro dispositivo), `LENTE_MBPS` (tasa, 24 por defecto). Registro: `/mnt/d/Temp/lente/webcam_iphone.log`.
 
 ### OBS en Linux
 
-El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver a correr solo, con OBS cerrado: `python3 "$LENTE/tools/linux/configurar_obs.py"` (`--simular` muestra qué haría). Sirve para el OBS de la distro y para el Flatpak, y configura los dos si están los dos.
+El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver a correr solo, con OBS cerrado: `python3 "$LENTE/tools/linux/configurar_obs.py" --datos /mnt/d --videos /mnt/d/Videos` (`--simular` muestra qué haría). Sirve para el OBS de la distro y para el Flatpak, y configura los dos si están los dos.
 
 | Qué | Cómo queda |
 |---|---|
 | Perfil y colección | **«Lente iPhone»**, activos al abrir OBS. Los demás perfiles y escenas quedan como estaban |
 | Video | 1920x1080 a 30 cuadros |
 | Escena «iPhone» | Fuente **«Webcam iPhone»**: Dispositivo de captura de video (V4L2) en `/dev/video10`, ajustada a toda la pantalla, sin búfer (menos delay) y con reinicio solo si deja de llegar imagen |
-| Color | Filtro **Apply LUT** con `Studio_Cinema_HerasHiguera_kitchen.cube` al 90%, igual que la laptop. Lo busca en el repo VELINEX (`/mnt/*/Documents/MANUEL/VELINEX/...`, `~/Documents/MANUEL/VELINEX/...` y parecidos) y lo copia a la carpeta de OBS (`luts/`) |
+| Color | Filtro **Apply LUT** con `Studio_Cinema_HerasHiguera_kitchen.cube` al 90%, igual que la laptop. Lo busca en el repo VELINEX, primero en el disco de datos (`/mnt/d/Documents/MANUEL/VELINEX/...`) y lo usa desde ahí. Solo si lo encuentra fuera del disco de datos lo copia a la carpeta de OBS (`luts/`) |
 | Audio | Mic/Aux = el micrófono por defecto del sistema (en la PC principal, el Fifine: dejarlo como entrada por defecto en la configuración de sonido) |
-| Grabación | Placa AMD o Intel: **VA-API H.264, CQP 18**. NVIDIA: **NVENC H.264, CQP 18**. Sin placa: x264 CRF 18. Formato MP4 híbrido (OBS 30.2 o superior; si no, MKV). Carpeta: `/mnt/d/Videos` si existe el disco de datos, si no `~/Videos` |
+| Grabación | Placa AMD o Intel: **VA-API H.264, CQP 18**. NVIDIA: **NVENC H.264, CQP 18**. Sin placa: x264 CRF 18. Formato MP4 híbrido (OBS 30.2 o superior; si no, MKV). Carpeta: `/mnt/d/Videos` (el disco de datos) |
 
 * **Si dice «LUT: no encontrado»:** el repo VELINEX no está en esa PC. Traerlo (o copiar solo el `.cube` desde `Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/kitchen/`) y correr `python3 "$LENTE/tools/linux/configurar_obs.py" --lut /ruta/Studio_Cinema_HerasHiguera_kitchen.cube`.
 * **Si OBS no puede grabar con la placa AMD:** en Fedora falta H.264 en VA-API (el instalador pone `mesa-va-drivers-freeworld`). Con el OBS Flatpak, cambiar en Ajustes › Salida › Grabación el codificador a «x264» como alternativa y avisar.
@@ -144,7 +161,8 @@ El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver
 | OBS no muestra la cámara | Prender primero la cámara y después abrir OBS. Con OBS abierto: doble clic en la fuente «Webcam iPhone» y Aceptar (la reabre). Revisar que el perfil y la escena sean «Lente iPhone». |
 | OBS abre con otra escena | Menús **Perfil** y **Colección de escenas** › «Lente iPhone». Si no aparecen: `python3 "$LENTE/tools/linux/configurar_obs.py"` con OBS cerrado. |
 | La imagen sale dada vuelta | Usar el otro acceso directo («sin girar» o el normal). |
-| Imagen congelada | `webcam-iphone --apagar` y prender de nuevo. Ver `~/.cache/lente/webcam_iphone.log`. |
+| Imagen congelada | `webcam-iphone --apagar` y prender de nuevo. Ver `/mnt/d/Temp/lente/webcam_iphone.log`. |
+| «No encuentro el disco de datos montado en /mnt/d» | Montar el HDD (`lsblk -f` para ver el disco; guía en `VELINEX/DEV & INFRAESTRUCTURA IA/Pase de Windows a Linux.md`) y volver a correr `instalar.sh`. Si está montado en otro lado: `instalar.sh --datos /ruta`. |
 | Lente no abre en el iPhone | Pasaron 7 días: renovar en SideStore (sección 1). |
 
 ---
@@ -153,6 +171,6 @@ El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver
 
 * **Archivos:** `tools/lente_rapido.py` (el puente, Windows y Linux), `tools/linux/configurar_obs.py` (OBS en Linux), `tools/usbmux_probe.py` (diagnóstico de usbmux: `--listar`, `--conectar 27183 --lnte "camera_fps=30" --demux` valida el formato y mide cuadros por segundo y tasa), `tools/linux/instalar.sh`, `tools/linux/webcam_iphone.sh`, `tools/linux/verificar.sh`, `tools/windows/instalar.ps1`.
 * **Cómo funciona:** `lente_rapido.py` abre una sesión con la app del iPhone por usbmux (puerto 27183 del iPhone), recibe H.264 con el formato de scrcpy 4.1 y le pasa el video a ffplay (ventana, Windows) o a ffmpeg (`-f v4l2 /dev/video10`, Linux). Protocolo en `docs/plan/ARQUITECTURA_Y_PROTOCOLO.md`.
-* **Diagnóstico rápido en Linux:** `python3 tools/usbmux_probe.py --listar` (tiene que mostrar el iPhone por USB), `webcam-iphone --estado`, `tail -f ~/.cache/lente/webcam_iphone.log`, `bash tools/linux/verificar.sh`.
-* **Reglas:** el Apple ID, contraseñas y códigos los escribe solo Manuel. Si ya existe una configuración de `v4l2loopback`, no pisarla (el instalador no la toca). En OBS, no borrar perfiles ni escenas de Manuel: lo de Lente vive en «Lente iPhone». Detener procesos solo por PID (el lanzador guarda el suyo en `$XDG_RUNTIME_DIR/lente-webcam-iphone.pid`). Nada de archivos temporales en el disco del sistema de Windows. No avanzar fases de Lente sin que Manuel lo pida.
+* **Diagnóstico rápido en Linux:** `python3 tools/usbmux_probe.py --listar` (tiene que mostrar el iPhone por USB), `webcam-iphone --estado`, `tail -f /mnt/d/Temp/lente/webcam_iphone.log`, `bash tools/linux/verificar.sh`.
+* **Reglas:** el Apple ID, contraseñas y códigos los escribe solo Manuel. Si ya existe una configuración de `v4l2loopback`, no pisarla (el instalador no la toca). En OBS, no borrar perfiles ni escenas de Manuel: lo de Lente vive en «Lente iPhone». Detener procesos solo por PID (el lanzador guarda el suyo en `$XDG_RUNTIME_DIR/lente-webcam-iphone.pid`). Nada pesado ni temporal en el disco del sistema, ni en Windows ni en Linux: todo al disco de datos (`/mnt/d`). No avanzar fases de Lente sin que Manuel lo pida.
 * **Al terminar:** anotar el resultado en `docs/plan/ESTADO.md` (una línea con fecha: distro, qué se instaló, salida de `verificar.sh`) y hacer commit.

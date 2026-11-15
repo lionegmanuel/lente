@@ -27,13 +27,17 @@ DISPOSITIVO="/dev/video${NR}"
 USUARIO="${USER:-$(id -un)}"
 SIMULAR=false
 CON_OBS=true
-for arg in "$@"; do
-    case "$arg" in
+DATOS=""
+while [[ $# -gt 0 ]]; do
+    case "$1" in
         --simular) SIMULAR=true ;;
         --sin-obs) CON_OBS=false ;;
-        *) echo "Opcion desconocida: $arg"; exit 1 ;;
+        --datos) DATOS="${2:-}"; shift ;;
+        *) echo "Opcion desconocida: $1"; exit 1 ;;
     esac
+    shift
 done
+CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/lente"
 
 GREEN='\033[0;32m'; CYAN='\033[0;36m'; YELLOW='\033[1;33m'; RED='\033[0;31m'; GRIS='\033[0;90m'; NC='\033[0m'
 paso() { echo ""; echo -e "${YELLOW}[*] $1${NC}"; }
@@ -84,6 +88,25 @@ for d in /sys/bus/pci/devices/*; do
     esac
 done
 echo "Distro: ${PRETTY_NAME:-$ID} · kernel ${KVER} · placa ${PLACA} · Secure Boot $($SECURE_BOOT && echo activo || echo apagado)"
+
+# 0. Disco de datos (HDD): ahi va todo lo pesado (OBS si hay que instalarlo, grabaciones, registros)
+paso "Disco de datos"
+if [[ -z "$DATOS" ]] && mountpoint -q /mnt/d 2>/dev/null; then DATOS="/mnt/d"; fi
+if [[ -z "$DATOS" || ! -d "$DATOS" ]]; then
+    echo -e "${RED}[ERROR] No encuentro el disco de datos montado en /mnt/d.${NC}"
+    echo "        Montarlo (ver docs/MODO_RAPIDO.md) o indicar otro: bash instalar.sh --datos /ruta/del/disco"
+    $SIMULAR || exit 1
+    DATOS="/mnt/d"
+fi
+FS_DATOS="$(findmnt -no FSTYPE --target "$DATOS" 2>/dev/null || echo desconocido)"
+u mkdir -p "${DATOS}/Videos" "${DATOS}/Temp/lente"
+u mkdir -p "$CONF_DIR"
+if $SIMULAR; then
+    echo -e "      ${GRIS}[simulado] escribir ${CONF_DIR}/lente.conf: DATOS=${DATOS}${NC}"
+else
+    printf 'DATOS=%q\n' "$DATOS" > "${CONF_DIR}/lente.conf"
+fi
+ok "Disco de datos: ${DATOS} (${FS_DATOS}). Grabaciones en ${DATOS}/Videos, registros en ${DATOS}/Temp/lente"
 
 # 1. Paquetes
 paso "Paquetes: usbmuxd, libimobiledevice, Python 3, FFmpeg con H.264 y v4l2loopback"
@@ -139,7 +162,13 @@ else
     echo -e "${RED}[AVISO] Sin receta para '${ID:-desconocida}'. Instalar a mano: usbmuxd, libimobiledevice (herramientas),"
     echo -e "        python3, ffmpeg con H.264 y v4l2loopback (modulo del kernel). Despues volver a correr este script.${NC}"
 fi
-if $SIMULAR || ffmpeg_listo; then ok "Paquetes listos"; else
+# Lo que se descargo para instalar no queda ocupando el disco del sistema
+if tiene dnf; then s dnf clean packages >/dev/null || true
+elif tiene apt-get; then s apt-get clean || true
+elif tiene pacman; then s pacman -Sc --noconfirm >/dev/null || true
+elif tiene zypper; then s zypper --non-interactive clean || true
+fi
+if $SIMULAR || ffmpeg_listo; then ok "Paquetes listos (sistema: no se pueden instalar en otro disco; cache de descargas limpia)"; else
     echo -e "${RED}[ERROR] FFmpeg sin decodificador H.264 o sin salida v4l2. Ver docs/MODO_RAPIDO.md, seccion Linux.${NC}"
     exit 1
 fi
@@ -212,32 +241,47 @@ ok "Menu y Escritorio: 'Webcam iPhone' y 'Webcam iPhone (sin girar)'. En termina
 # 5. OBS
 if $CON_OBS; then
     paso "OBS Studio"
-    if (tiene flatpak && flatpak info com.obsproject.Studio >/dev/null 2>&1) || tiene obs; then
+    if (tiene flatpak && flatpak list --app --columns=application 2>/dev/null | grep -qx com.obsproject.Studio) || tiene obs; then
         ok "OBS ya esta instalado"
-    elif tiene flatpak; then
-        # Flathub: el mismo OBS en cualquier distro, con todos los codecs
-        u flatpak remote-add --user --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
-        u flatpak install --user -y --noninteractive flathub com.obsproject.Studio
-        ok "OBS instalado (Flatpak de Flathub)"
-    elif tiene dnf; then
-        s dnf install -y obs-studio obs-studio-plugin-x264 || s dnf install -y obs-studio
-    elif tiene apt-get; then
-        s apt-get install -y obs-studio
-    elif tiene pacman; then
-        s pacman -S --needed --noconfirm obs-studio
-    elif tiene zypper; then
-        s zypper --non-interactive install obs-studio
+    elif tiene flatpak && [[ "$FS_DATOS" =~ ^(ext4|btrfs|xfs|f2fs)$ ]]; then
+        # Flatpak de Flathub (el mismo OBS en cualquier distro, con todos los codecs) instalado
+        # en el disco de datos: una instalacion de Flatpak propia en ${DATOS}/flatpak
+        escribir /etc/flatpak/installations.d/datos.conf <<EOF
+[Installation "datos"]
+Path=${DATOS}/flatpak
+DisplayName=Disco de datos
+StorageType=harddisk
+EOF
+        s mkdir -p "${DATOS}/flatpak"
+        s flatpak remote-add --installation=datos --if-not-exists flathub https://dl.flathub.org/repo/flathub.flatpakrepo
+        s flatpak install --installation=datos -y --noninteractive flathub com.obsproject.Studio
+        ok "OBS instalado en el disco de datos (${DATOS}/flatpak). Aparece en el menu despues de cerrar sesion y volver a entrar."
+    elif tiene flatpak || tiene dnf || tiene apt-get || tiene pacman || tiene zypper; then
+        # Flatpak no funciona sobre NTFS (necesita permisos de Linux): OBS va por la distro, al disco del sistema
+        [[ "$FS_DATOS" =~ ^(ext4|btrfs|xfs|f2fs)$ ]] || aviso "El disco de datos es ${FS_DATOS}: Flatpak no se puede instalar ahi. OBS va por la distro (unos 200 MB en el sistema)."
+        if tiene dnf; then
+            s dnf install -y obs-studio obs-studio-plugin-x264 || s dnf install -y obs-studio
+        elif tiene apt-get; then
+            s apt-get install -y obs-studio
+        elif tiene pacman; then
+            s pacman -S --needed --noconfirm obs-studio
+        elif tiene zypper; then
+            s zypper --non-interactive install obs-studio
+        else
+            aviso "Instalar OBS Studio a mano (obsproject.com) y volver a correr este script."
+        fi
     else
         aviso "Instalar OBS Studio a mano (obsproject.com) y volver a correr este script."
     fi
 
     paso "OBS: perfil y escena 'Lente iPhone'"
+    OBS_ARGS=(--videos "${DATOS}/Videos" --datos "$DATOS")
     if $SIMULAR; then
-        python3 "${AQUI}/configurar_obs.py" --simular || aviso "No se pudo simular la configuracion de OBS."
+        python3 "${AQUI}/configurar_obs.py" "${OBS_ARGS[@]}" --simular || aviso "No se pudo simular la configuracion de OBS."
     elif pgrep -x obs >/dev/null 2>&1; then
-        aviso "OBS esta abierto: cerrarlo y correr: python3 \"${AQUI}/configurar_obs.py\""
+        aviso "OBS esta abierto: cerrarlo y correr: python3 \"${AQUI}/configurar_obs.py\" --videos \"${DATOS}/Videos\" --datos \"${DATOS}\""
     else
-        python3 "${AQUI}/configurar_obs.py" || aviso "OBS sin configurar: ver el mensaje de arriba y docs/MODO_RAPIDO.md."
+        python3 "${AQUI}/configurar_obs.py" "${OBS_ARGS[@]}" || aviso "OBS sin configurar: ver el mensaje de arriba y docs/MODO_RAPIDO.md."
     fi
 fi
 

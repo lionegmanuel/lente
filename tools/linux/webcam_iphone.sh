@@ -13,7 +13,7 @@
 #   webcam_iphone.sh --estado        dice si esta prendida
 #
 # Variables: LENTE_V4L2 (por defecto /dev/video10), LENTE_MBPS (24).
-# Registro: ~/.cache/lente/webcam_iphone.log
+# Registro: <disco de datos>/Temp/lente/webcam_iphone.log (o ~/.cache/lente si no hay disco de datos)
 
 set -uo pipefail
 
@@ -23,7 +23,15 @@ DISPOSITIVO="${LENTE_V4L2:-/dev/video10}"
 MBPS="${LENTE_MBPS:-24}"
 ESTADO_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 PIDFILE="${ESTADO_DIR}/lente-webcam-iphone.pid"
-LOGDIR="${XDG_CACHE_HOME:-$HOME/.cache}/lente"
+# Registros en el disco de datos (lo dejo instalar.sh en ~/.config/lente/lente.conf)
+DATOS=""
+CONF="${XDG_CONFIG_HOME:-$HOME/.config}/lente/lente.conf"
+[[ -f "$CONF" ]] && . "$CONF"
+if [[ -n "$DATOS" && -d "$DATOS" ]]; then
+    LOGDIR="${DATOS}/Temp/lente"
+else
+    LOGDIR="${XDG_CACHE_HOME:-$HOME/.cache}/lente"
+fi
 LOG="${LOGDIR}/webcam_iphone.log"
 mkdir -p "$LOGDIR"
 
