@@ -25,6 +25,9 @@ targets:
       path: Lente/Info.plist
       properties:
         CFBundleDisplayName: Lente
+        # Sin esto XcodeGen escribe 1.0 y 1 fijos: SideStore y la PC verian otra version
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         NSCameraUsageDescription: "Lente usa la cámara para mandar el video a tu computadora por el cable."
         UIRequiresFullScreen: true
         UIStatusBarHidden: true
