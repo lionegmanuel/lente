@@ -105,7 +105,7 @@ Una pantalla, oscura, con:
 * Botón «Pantalla negra» (también desde la PC con Alt+O). En negro: brillo al mínimo; doble toque vuelve y restaura el brillo anterior.
 * Interruptor «Vista previa», apagado por defecto (la vista previa gasta GPU y batería).
 * Texto de ayuda de una línea: «Conectá el cable y abrí Lente en la computadora».
-* `isIdleTimerDisabled = true` mientras la app está en primer plano y hay sesión o espera de sesión.
+* `isIdleTimerDisabled = true` solo mientras transmite (app 1.0.2, 2026-11-16); esperando la computadora, el iPhone se bloquea con su configuración. Transmitiendo, a los 20 s sin tocar la pantalla pasa sola a «Pantalla negra»; al salir de la app o al cortarse la transmisión vuelve el brillo anterior.
 
 Idioma: español e inglés según el idioma del sistema (`Localizable.strings`).
 

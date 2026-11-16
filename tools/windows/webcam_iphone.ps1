@@ -28,7 +28,11 @@ $posicion = $null
 if (-not $VentanaLibre) {
     Add-Type -AssemblyName System.Windows.Forms
     $principal = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-    $posicion = @($principal.X, $principal.Y)
+    # La posicion es la de la imagen: se baja el alto de la barra de titulo para que se vean
+    # los botones de minimizar y cerrar (barra + borde + relleno del borde, como Windows la dibuja)
+    Add-Type -Namespace Lente -Name Metricas -MemberDefinition '[DllImport("user32.dll")] public static extern int GetSystemMetrics(int i);'
+    $barra = [Lente.Metricas]::GetSystemMetrics(4) + [Lente.Metricas]::GetSystemMetrics(33) + [Lente.Metricas]::GetSystemMetrics(92)
+    $posicion = @($principal.X, ($principal.Y + $barra))
 }
 
 $tools = Split-Path -Parent $PSScriptRoot
@@ -50,7 +54,7 @@ if ($lente -and -not $Rapido) {
                     '--ios-reconnect=3600', '--pause-on-exit=false')
     if (-not $SinGirar) { $argumentos += '--capture-orientation=180' }
     if ($posicion) {
-        $argumentos += @('--window-borderless', "--window-x=$($posicion[0])", "--window-y=$($posicion[1])",
+        $argumentos += @("--window-x=$($posicion[0])", "--window-y=$($posicion[1])",
                          '--window-width=1920', '--window-height=1080')
     }
     Registrar ("Lente para la PC: {0} {1}" -f $lente.FullName, ($argumentos -join ' '))
