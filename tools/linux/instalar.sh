@@ -16,7 +16,7 @@
 #      y el comando webcam-iphone.
 #   5. OBS Studio (si falta, el Flatpak de Flathub) con el perfil y la escena "Lente iPhone":
 #      1080p a 30 cuadros, la camara en /dev/video10 con el LUT, el microfono del sistema y la
-#      grabacion con la placa en CQP 18 (configurar_obs.py). No toca otros perfiles ni escenas.
+#      grabacion con la placa en CQP 16 (configurar_obs.py). No toca otros perfiles ni escenas.
 # Se puede volver a correr: no duplica nada.
 
 set -euo pipefail

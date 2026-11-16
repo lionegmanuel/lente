@@ -7,9 +7,12 @@ los perfiles ni las escenas que ya existan:
   * Escena "iPhone" con la fuente "Webcam iPhone" (V4L2, /dev/video10), ajustada a toda
     la pantalla, sin bufer y con reinicio solo si deja de llegar imagen. Filtro Apply LUT
     al 90% si encuentra el LUT (Studio_Cinema_HerasHiguera_kitchen.cube).
-  * Mic/Aux: el microfono por defecto del sistema.
-  * Grabacion con la placa: AMD o Intel VA-API H.264 CQP 18; NVIDIA NVENC H.264 CQP 18;
-    sin placa, x264 CRF 18. Carpeta: /mnt/d/Videos si existe el disco de datos, si no ~/Videos.
+  * Mic/Aux: si esta enchufado el receptor Boya BY-V, ese microfono con los 6 filtros de la
+    plantilla de Velinex (Contenido y Marketing/Plantilla Microfono OBS, la misma de la
+    laptop con Windows); si no, el microfono por defecto del sistema, sin filtros.
+  * Grabacion con la placa, a la maxima calidad (2026-11-16, igual que OBS en la laptop):
+    AMD o Intel VA-API H.264 CQP 16; NVIDIA NVENC H.264 CQP 16, preset p7 y dos pasadas
+    completas; sin placa, x264 CRF 16. Carpeta: /mnt/d/Videos si existe el disco de datos, si no ~/Videos.
 
 Uso (con OBS cerrado):
     python3 configurar_obs.py [--lut RUTA.cube] [--videos CARPETA] [--fps 30] [--simular]
@@ -30,6 +33,7 @@ from pathlib import Path
 NOMBRE = "Lente iPhone"
 CARPETA = "Lente_iPhone"
 LUT_NOMBRE = "Studio_Cinema_HerasHiguera_kitchen.cube"
+PLANTILLA_MIC = "Contenido y Marketing/Plantilla Microfono OBS/plantilla_mic_boya_byv.json"
 FLATPAK_ID = "com.obsproject.Studio"
 
 
@@ -111,6 +115,37 @@ def buscar_lut(datos: str | None) -> str | None:
     return None
 
 
+def buscar_plantilla_mic(datos: str | None) -> dict | None:
+    """Plantilla del Boya BY-V del repo VELINEX, buscada en los mismos lugares que el LUT."""
+    lut = buscar_lut(datos)
+    candidatas = []
+    if lut and "/VELINEX/" in lut:
+        candidatas.append(lut.split("/VELINEX/")[0] + "/VELINEX/" + PLANTILLA_MIC)
+    casa = str(Path.home())
+    patrones = ([f"{datos}/Documents/MANUEL/VELINEX/{PLANTILLA_MIC}"] if datos else []) + [
+        f"/mnt/*/Documents/MANUEL/VELINEX/{PLANTILLA_MIC}", f"/run/media/*/*/Documents/MANUEL/VELINEX/{PLANTILLA_MIC}",
+        f"{casa}/Documents/MANUEL/VELINEX/{PLANTILLA_MIC}", f"{casa}/*/VELINEX/{PLANTILLA_MIC}"]
+    for patron in patrones:
+        candidatas += sorted(glob.glob(patron))
+    for c in candidatas:
+        if os.path.isfile(c):
+            try:
+                return json.loads(Path(c).read_text(encoding="utf-8"))
+            except (OSError, ValueError):
+                return None
+    return None
+
+
+def mic_boya() -> str | None:
+    """Nombre de PipeWire/PulseAudio del receptor Boya BY-V, si esta enchufado."""
+    for linea in correr(["pactl", "list", "short", "sources"]).splitlines():
+        partes = linea.split("\t")
+        if len(partes) > 1 and not partes[1].endswith(".monitor") and any(
+                m in partes[1].lower() for m in ("by-v", "by_v", "boya")):
+            return partes[1]
+    return None
+
+
 def carpeta_videos() -> Path:
     if os.path.isdir("/mnt/d"):
         return Path("/mnt/d/Videos")
@@ -120,11 +155,11 @@ def carpeta_videos() -> Path:
 
 def codificador(tipo_placa: str) -> tuple:
     if tipo_placa in ("amd", "intel"):
-        return "ffmpeg_vaapi_tex", {"rate_control": "CQP", "qp": 18, "bf": 0, "keyint_sec": 2}
+        return "ffmpeg_vaapi_tex", {"rate_control": "CQP", "qp": 16, "bf": 0, "keyint_sec": 2}
     if tipo_placa == "nvidia":
-        return "obs_nvenc_h264_tex", {"rate_control": "CQP", "cqp": 18, "preset2": "p5", "tune": "hq",
-                                      "multipass": "qres", "profile": "high", "bf": 2}
-    return "obs_x264", {"rate_control": "CRF", "crf": 18, "preset": "veryfast", "profile": "high"}
+        return "obs_nvenc_h264_tex", {"rate_control": "CQP", "cqp": 16, "preset2": "p7", "tune": "hq",
+                                      "multipass": "fullres", "profile": "high", "bf": 2}
+    return "obs_x264", {"rate_control": "CRF", "crf": 16, "preset": "veryfast", "profile": "high"}
 
 
 def fuente(nombre: str, id_: str, ajustes: dict, filtros: list | None = None, mixers: int = 0) -> dict:
@@ -140,7 +175,8 @@ def fuente(nombre: str, id_: str, ajustes: dict, filtros: list | None = None, mi
     return s
 
 
-def coleccion(dispositivo: str, lut: str | None) -> dict:
+def coleccion(dispositivo: str, lut: str | None, mic_dispositivo: str = "default",
+              plantilla_mic: dict | None = None) -> dict:
     filtros = []
     if lut:
         filtro = fuente("Apply LUT", "clut_filter", {"image_path": lut, "clut_amount": 0.9, "passthrough_alpha": False})
@@ -158,7 +194,14 @@ def coleccion(dispositivo: str, lut: str | None) -> dict:
     }
     escena = fuente("iPhone", "scene", {"items": [item], "id_counter": 1, "custom_size": False})
     escena["canvas_uuid"] = "6c69626f-6273-4c00-9d88-c5136d61696e"  # lienzo principal de OBS 32 (constante de libobs)
-    mic = fuente("Mic/Aux", "pulse_input_capture", {"device_id": "default"}, mixers=255)
+    filtros_mic = []
+    for f in (plantilla_mic or {}).get("filtros", []):
+        filtro = fuente(f["name"], f["id"], f["settings"], mixers=255)
+        filtro["versioned_id"] = f.get("versioned_id", f["id"])
+        filtros_mic.append(filtro)
+    mic = fuente("Mic/Aux", "pulse_input_capture", {"device_id": mic_dispositivo}, filtros_mic, mixers=255)
+    if plantilla_mic:
+        mic["volume"] = float(plantilla_mic.get("volumen_fuente", 1.0))
     return {
         "AuxAudioDevice1": mic,
         "current_scene": "iPhone", "current_program_scene": "iPhone",
@@ -191,7 +234,8 @@ def poner(cp: configparser.ConfigParser, seccion: str, valores: dict) -> None:
         cp[seccion][k] = str(v)
 
 
-def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str, enc_ajustes: dict) -> None:
+def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str, enc_ajustes: dict,
+               boya: str | None = None, plantilla_mic: dict | None = None) -> None:
     version = version_obs(tipo)
     formato = "hybrid_mp4" if version >= (30, 2) else "mkv"
     perfil_dir = base / "basic/profiles" / CARPETA
@@ -212,13 +256,21 @@ def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str
     decir(f"OBS {tipo} {'.'.join(map(str, version)) or '(version desconocida)'} en {base}")
     decir(f"Perfil y escenas '{NOMBRE}': 1920x1080 a {a.fps} cuadros, {enc} {json.dumps(enc_ajustes)}, {formato} en {videos}")
     decir(f"Fuente 'Webcam iPhone' en {a.dispositivo}; LUT: {lut or 'no encontrado (se agrega a mano, ver docs/MODO_RAPIDO.md)'}")
+    if boya and plantilla_mic:
+        decir(f"Mic/Aux: Boya BY-V ({boya}) con la plantilla '{plantilla_mic.get('nombre', '')}' "
+              f"v{plantilla_mic.get('version', '')}, {len(plantilla_mic.get('filtros', []))} filtros")
+    elif boya:
+        decir(f"Mic/Aux: Boya BY-V ({boya}), sin filtros: no encontre la plantilla del repo VELINEX")
+    else:
+        decir("Mic/Aux: microfono por defecto, sin filtros. Para el Boya: enchufar el receptor y volver a correr")
     if a.simular:
         return
 
     escribir_ini(ini, perfil_dir / "basic.ini")
     (perfil_dir / "recordEncoder.json").write_text(json.dumps(enc_ajustes, indent=4), encoding="utf-8")
     escenas.parent.mkdir(parents=True, exist_ok=True)
-    escenas.write_text(json.dumps(coleccion(a.dispositivo, lut), indent=4, ensure_ascii=False), encoding="utf-8")
+    datos_escenas = coleccion(a.dispositivo, lut, boya or "default", plantilla_mic if boya else None)
+    escenas.write_text(json.dumps(datos_escenas, indent=4, ensure_ascii=False), encoding="utf-8")
     activo = {"Profile": NOMBRE, "ProfileDir": CARPETA, "SceneCollection": NOMBRE, "SceneCollectionFile": f"{CARPETA}.json"}
     # OBS 31 o superior usa user.ini; los anteriores, global.ini. Se escriben los dos.
     for archivo in (usuario, globales):
@@ -252,6 +304,8 @@ def main() -> None:
     videos = Path(a.videos) if a.videos else carpeta_videos()
     tipo_placa = a.placa or placa()
     enc, enc_ajustes = codificador(tipo_placa)
+    boya = mic_boya()
+    plantilla_mic = buscar_plantilla_mic(a.datos) if boya else None
     decir(f"Placa: {tipo_placa}")
     for tipo, base in dirs:
         lut_final = lut
@@ -263,7 +317,7 @@ def main() -> None:
             if Path(lut).resolve() != destino.resolve():
                 shutil.copyfile(lut, destino)
             lut_final = str(destino)
-        configurar(base, tipo, a, lut_final, videos, enc, enc_ajustes)
+        configurar(base, tipo, a, lut_final, videos, enc, enc_ajustes, boya, plantilla_mic)
     print(f"OBS listo: al abrirlo, perfil y escenas '{NOMBRE}'." if not a.simular else "Simulado: no se escribio nada.")
 
 

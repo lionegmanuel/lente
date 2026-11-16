@@ -53,9 +53,13 @@ def entrada_h264(fps: int, ventana: bool) -> list:
                      "-f", "h264", "-i", "pipe:0"]
 
 
-def ffplay_cmd(fps: int, girar: bool) -> list:
+def ffplay_cmd(fps: int, girar: bool, fija=None) -> list:
     cmd = [programa("ffplay", "LENTE_FFPLAY"), "-hide_banner", "-loglevel", "error",
-           "-window_title", "Lente", "-framedrop"] + entrada_h264(fps, ventana=True)
+           "-window_title", "Lente", "-framedrop"]
+    if fija:
+        # Ventana fija de 1920x1080 sin bordes en esa esquina: OBS la captura a 1080p pixel a pixel
+        cmd += ["-noborder", "-x", "1920", "-y", "1080", "-left", str(fija[0]), "-top", str(fija[1])]
+    cmd += entrada_h264(fps, ventana=True)
     if girar:
         cmd += ["-vf", "hflip,vflip"]
     return cmd
@@ -103,6 +107,8 @@ def main() -> None:
     ap.add_argument("--mbps", type=int, default=24, help="tasa de bits del iPhone (24)")
     ap.add_argument("--girar", action="store_true", help="da vuelta la imagen 180 grados")
     ap.add_argument("--v4l2", metavar="DISPOSITIVO", help="Linux: escribe en la webcam virtual (ej. /dev/video10)")
+    ap.add_argument("--fija", nargs=2, type=int, metavar=("X", "Y"),
+                    help="ventana sin bordes de 1920x1080 con la esquina en X Y (para OBS a 1080p)")
     a = ap.parse_args()
 
     flags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
@@ -112,7 +118,7 @@ def main() -> None:
             sys.exit(2)
         cmd = ffmpeg_v4l2_cmd(a.fps, a.girar, a.v4l2)
     else:
-        cmd = ffplay_cmd(a.fps, a.girar)
+        cmd = ffplay_cmd(a.fps, a.girar, a.fija)
     salida = subprocess.Popen(cmd, stdin=subprocess.PIPE, creationflags=flags)
     avisar(f"Salida: {a.v4l2 or 'ventana Lente'} · esperando el iPhone con Lente abierta")
 

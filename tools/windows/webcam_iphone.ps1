@@ -5,13 +5,36 @@
 # telemetria. Si no esta o no arranca (por ejemplo, la app del iPhone es anterior a 1.0 y no
 # rota la imagen), usa el modo rapido (ffplay).
 #
-#   powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File webcam_iphone.ps1 [-SinGirar] [-Rapido]
+#   powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File webcam_iphone.ps1 [-SinGirar] [-Rapido] [-VentanaLibre]
+#
+# Ventana fija de 1920x1080 sin bordes y fuera de la vista (cambio del 2026-11-16): OBS captura la
+# ventana al tamano que tiene, asi que con este tamano graba siempre 1080p pixel a pixel, con uno,
+# dos o los monitores que sean y de cualquier resolucion. La ventana queda a la izquierda de todo
+# el escritorio (sea cual sea al abrirla), no ocupa ninguna pantalla y OBS la sigue capturando
+# (probado). Se ve en la vista previa de OBS; Alt+Tab la enfoca para los atajos. Nunca minimizarla:
+# Windows deja de dibujar las ventanas minimizadas y OBS recibe negro.
+# -Visible la abre en la esquina del monitor principal (mismo tamano); -VentanaLibre, la ventana comun.
 param(
     [switch]$SinGirar,
     [switch]$Rapido,
+    [switch]$VentanaLibre,
+    [switch]$Visible,
     [int]$Fps = 30,
     [int]$Mbps = 24
 )
+
+# Esquina de la ventana fija: a la izquierda de todo el escritorio virtual, medido al abrirla
+$posicion = $null
+if (-not $VentanaLibre) {
+    Add-Type -AssemblyName System.Windows.Forms
+    if ($Visible) {
+        $principal = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+        $posicion = @($principal.X, $principal.Y)
+    } else {
+        $escritorio = [System.Windows.Forms.SystemInformation]::VirtualScreen
+        $posicion = @(($escritorio.Left - 1920 - 200), $escritorio.Top)
+    }
+}
 
 $tools = Split-Path -Parent $PSScriptRoot
 # La version mas alta (carpetas Lente-PC-windows-x64-vX.Y.Z)
@@ -31,6 +54,10 @@ if ($lente -and -not $Rapido) {
     $argumentos = @('--ios', '--window-title=Lente', "--camera-fps=$Fps", "--video-bit-rate=${Mbps}M",
                     '--ios-reconnect=3600', '--pause-on-exit=false')
     if (-not $SinGirar) { $argumentos += '--capture-orientation=180' }
+    if ($posicion) {
+        $argumentos += @('--window-borderless', "--window-x=$($posicion[0])", "--window-y=$($posicion[1])",
+                         '--window-width=1920', '--window-height=1080')
+    }
     Registrar ("Lente para la PC: {0} {1}" -f $lente.FullName, ($argumentos -join ' '))
     # Por cmd oculto, como scrcpy-noconsole.vbs: la consola no se ve y la ventana de video si
     $salida = Join-Path $registro 'lente.log'
@@ -58,5 +85,6 @@ if (-not $pythonw) {
 }
 $args2 = @("`"$(Join-Path $tools 'lente_rapido.py')`"", "--fps", "$Fps", "--mbps", "$Mbps")
 if (-not $SinGirar) { $args2 += '--girar' }
+if ($posicion) { $args2 += @('--fija', "$($posicion[0])", "$($posicion[1])") }
 Registrar ("Modo rapido: {0} {1}" -f $pythonw, ($args2 -join ' '))
 Start-Process -FilePath $pythonw -ArgumentList $args2 -WorkingDirectory $tools

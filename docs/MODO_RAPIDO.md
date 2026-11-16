@@ -46,14 +46,16 @@ Ya está hecho en el iPhone de Manuel; se repite solo en un iPhone nuevo.
 
 1. Lente abierta en el iPhone y el cable conectado.
 2. Doble clic en **Webcam iPhone**: se abre la ventana «Lente» con la cámara.
-3. OBS: la fuente **Captura de ventana** de **«[ffplay.exe]: Lente»** (en la laptop ya existe: «Webcam iPh 15 Pro Max», con el LUT HerasHiguera kitchen al 90%).
+3. OBS: la fuente **Captura de ventana** de **«[lente.exe]: Lente»** (con el modo rápido, «[ffplay.exe]: Lente»). En la laptop ya existe: «Webcam iPh 15 Pro Max», con el LUT HerasHiguera kitchen al 90%.
 
-La ventana no se puede minimizar (OBS no captura ventanas minimizadas), pero puede quedar detrás de otras. Si se corta el cable, la ventana queda abierta y la imagen vuelve sola al reconectar. Para terminar, cerrar la ventana «Lente».
+Desde el 2026-11-16 la ventana «Lente» abre **fija en 1920x1080, sin bordes y fuera de la vista**: a la izquierda de todo el escritorio, medido al abrirla, con uno, dos o los monitores que haya y de cualquier resolución. No ocupa ninguna pantalla y OBS la sigue capturando en vivo (probado en la laptop). OBS captura la ventana al tamaño que tiene, así que graba siempre 1080p pixel a pixel, sin escalar. La imagen se mira en la vista previa de OBS; Alt+Tab enfoca la ventana para los atajos. Otras formas: `webcam_iphone.ps1 -Visible` (misma ventana en la esquina del monitor principal) y `-VentanaLibre` (la ventana común de antes).
 
-### Configuración de OBS para la mejor calidad (laptop, 2026-11-15)
+Nunca minimizar la ventana: Windows deja de dibujar las ventanas minimizadas y OBS recibe negro (pasó el 2026-11-16). Tapada por otras ventanas o fuera de la vista sí se graba. Si se corta el cable, la ventana queda abierta y la imagen vuelve sola al reconectar. Para terminar, cerrar la ventana «Lente» (Alt+F4).
 
-* Captura de ventana: método **Windows 10 (1903 y posteriores)**, sin capturar el cursor.
-* Grabación: Salida › modo Avanzado › Grabación › codificador **NVIDIA NVENC H.264**, control de tasa **CQP 18**, preset P5, perfil high. Antes estaba en CBR sin bitrate (2.500 kbps), que ensuciaba cualquier imagen.
+### Configuración de OBS para la máxima calidad (laptop, 2026-11-16)
+
+* Captura de ventana: método **Windows 10 (1903 y posteriores)**, sin capturar el cursor. La fuente va ajustada al lienzo (Transformar › Ajustar a la pantalla, 1920x1080): si la ventana cambia de tamaño, la imagen igual llena el cuadro.
+* Grabación: Salida › modo Avanzado › Grabación › codificador **NVIDIA NVENC H.264**, control de tasa **CQP 16**, preset **P7**, dos pasadas a resolución completa, perfil high. Antes estaba en CBR sin bitrate (2.500 kbps), que ensuciaba cualquier imagen, y el 2026-11-15 en CQP 18 con P5.
 * Video: 1920x1080 a 30 cuadros. El iPhone manda 30 cuadros y 24 Mbps por defecto (`--fps 30 --mbps 24`), igual que graba OBS: a 30 cuadros la cámara junta más luz por cuadro y hay menos ruido adentro de casa.
 
 ---
@@ -143,7 +145,8 @@ El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver
 | Escena «iPhone» | Fuente **«Webcam iPhone»**: Dispositivo de captura de video (V4L2) en `/dev/video10`, ajustada a toda la pantalla, sin búfer (menos delay) y con reinicio solo si deja de llegar imagen |
 | Color | Filtro **Apply LUT** con `Studio_Cinema_HerasHiguera_kitchen.cube` al 90%, igual que la laptop. Lo busca en el repo VELINEX, primero en el disco de datos (`/mnt/d/Documents/MANUEL/VELINEX/...`) y lo usa desde ahí. Solo si lo encuentra fuera del disco de datos lo copia a la carpeta de OBS (`luts/`) |
 | Audio | Mic/Aux = el micrófono por defecto del sistema (en la PC principal, el Fifine: dejarlo como entrada por defecto en la configuración de sonido) |
-| Grabación | Placa AMD o Intel: **VA-API H.264, CQP 18**. NVIDIA: **NVENC H.264, CQP 18**. Sin placa: x264 CRF 18. Formato MP4 híbrido (OBS 30.2 o superior; si no, MKV). Carpeta: `/mnt/d/Videos` (el disco de datos) |
+| Micrófono | Si el receptor Boya BY-V está enchufado (en la PC con Fedora, por el adaptador USB común a USB-C), Mic/Aux queda en ese micrófono con los 6 filtros de la plantilla de Velinex, igual que la laptop. Si no está, el micrófono por defecto sin filtros: enchufarlo y volver a correr `configurar_obs.py` con OBS cerrado (2026-11-16) |
+| Grabación | Máxima calidad, igual que la laptop (2026-11-16). Placa AMD o Intel: **VA-API H.264, CQP 16**. NVIDIA: **NVENC H.264, CQP 16**, preset P7, dos pasadas completas. Sin placa: x264 CRF 16. Formato MP4 híbrido (OBS 30.2 o superior; si no, MKV). Carpeta: `/mnt/d/Videos` (el disco de datos) |
 
 * **Si dice «LUT: no encontrado»:** el repo VELINEX no está en esa PC. Traerlo (o copiar solo el `.cube` desde `Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/kitchen/`) y correr `python3 "$LENTE/tools/linux/configurar_obs.py" --lut /ruta/Studio_Cinema_HerasHiguera_kitchen.cube`.
 * **Si OBS no puede grabar con la placa AMD:** en Fedora falta H.264 en VA-API (el instalador pone `mesa-va-drivers-freeworld`). Con el OBS Flatpak, cambiar en Ajustes › Salida › Grabación el codificador a «x264» como alternativa y avisar.
