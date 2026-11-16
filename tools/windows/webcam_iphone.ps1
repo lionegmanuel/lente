@@ -32,7 +32,9 @@ if (-not $VentanaLibre) {
         $posicion = @($principal.X, $principal.Y)
     } else {
         $escritorio = [System.Windows.Forms.SystemInformation]::VirtualScreen
-        $posicion = @(($escritorio.Left - 1920 - 200), $escritorio.Top)
+        # 1 pixel adentro del escritorio: Windows no deja empezar a capturar (WGC) una ventana que
+        # nace afuera de todas las pantallas (OBS: winrt_capture_init 0x80070057, 2026-11-16)
+        $posicion = @(($escritorio.Left - 1919), $escritorio.Top)
     }
 }
 
