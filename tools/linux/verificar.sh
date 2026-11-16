@@ -35,8 +35,10 @@ else
     mal "Falta Python 3.8 o superior"
 fi
 if command -v ffmpeg >/dev/null; then
-    if ffmpeg -hide_banner -decoders 2>/dev/null | grep -qE '^ *V[^ ]* +h264 '; then bien "FFmpeg decodifica H.264"; else mal "FFmpeg sin H.264 (Fedora: sudo dnf install --allowerasing ffmpeg de RPM Fusion)"; fi
-    if ffmpeg -hide_banner -muxers 2>/dev/null | grep -qE ' v4l2 '; then bien "FFmpeg escribe en V4L2"; else mal "FFmpeg sin salida v4l2"; fi
+    # Into a variable first (pipefail + grep -q = false failures); FFmpeg 8 says "video4linux2,v4l2"
+    DEC="$(ffmpeg -hide_banner -decoders 2>/dev/null)"; MUX="$(ffmpeg -hide_banner -muxers 2>/dev/null)"
+    if grep -qE '^ *V[^ ]* +h264 ' <<<"$DEC"; then bien "FFmpeg decodifica H.264"; else mal "FFmpeg sin H.264 (Fedora: sudo dnf install --allowerasing ffmpeg de RPM Fusion)"; fi
+    if grep -qE '[ ,]v4l2 ' <<<"$MUX"; then bien "FFmpeg escribe en V4L2"; else mal "FFmpeg sin salida v4l2"; fi
 else
     mal "Falta ffmpeg"
 fi

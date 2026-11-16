@@ -128,7 +128,7 @@ Si el disco de datos no está montado, el instalador se frena con un error en lu
 
 Sigue andando aunque se desenchufe el cable o se cierre Lente en el iPhone: al volver, la imagen vuelve sola. Orden recomendado: primero la cámara y después OBS.
 
-**Cuadros por segundo:** 30, igual que en la laptop (decisión de Manuel, 2026-11-15). El perfil «Lente iPhone» viene a 30 y el lanzador lee los cuadros del perfil activo de OBS (de la distro o Flatpak) y pide esos mismos al iPhone; si no los encuentra, usa 30. Para forzar otro valor: `webcam-iphone --fps 60`.
+**Cuadros por segundo:** 30, igual que en la laptop (decisión de Manuel, 2026-11-15). El perfil «Lente iPhone» viene a 30 y el lanzador lee los cuadros del perfil activo de OBS (de la distro o Flatpak) con un máximo de 30, para gastar lo menos posible (batería y calor del iPhone, procesador de la PC): con un perfil a 60, como `VELINEX_PRO`, el iPhone igual manda 30. Si no los encuentra, usa 30. Para forzar otro valor: `webcam-iphone --fps 60`.
 
 Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--ventana` (muestra una ventana «Lente» para mirar sin OBS), `--estado`, `--apagar`. Variables: `LENTE_V4L2` (otro dispositivo), `LENTE_MBPS` (tasa, 24 por defecto). Registro: `/mnt/d/Temp/lente/webcam_iphone.log`.
 

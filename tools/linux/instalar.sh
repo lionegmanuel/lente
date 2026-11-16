@@ -61,9 +61,14 @@ u() {
 }
 tiene() { command -v "$1" >/dev/null 2>&1; }
 ffmpeg_listo() {
+    # Output to a variable first: with pipefail, grep -q closing the pipe early (SIGPIPE) reads as a
+    # failure. FFmpeg 8 lists the muxer as "video4linux2,v4l2", hence [ ,] before v4l2.
     tiene ffmpeg || return 1
-    ffmpeg -hide_banner -decoders 2>/dev/null | grep -qE '^ *V[^ ]* +h264 ' || return 1
-    ffmpeg -hide_banner -muxers 2>/dev/null | grep -qE ' v4l2 '
+    local lista
+    lista="$(ffmpeg -hide_banner -decoders 2>/dev/null)"
+    grep -qE '^ *V[^ ]* +h264 ' <<<"$lista" || return 1
+    lista="$(ffmpeg -hide_banner -muxers 2>/dev/null)"
+    grep -qE '[ ,]v4l2 ' <<<"$lista"
 }
 
 echo -e "${CYAN}=================================================================${NC}"
@@ -211,6 +216,9 @@ fi
 
 # 4. Accesos directos
 paso "Accesos directos"
+if $SIMULAR; then
+    echo -e "      ${GRIS}[simulado] comando ~/.local/bin/webcam-iphone y accesos 'Webcam iPhone' y 'Webcam iPhone (sin girar)' en el menu y el Escritorio${NC}"
+else
 chmod +x "${AQUI}"/*.sh
 mkdir -p "$HOME/.local/bin" "$HOME/.local/share/applications"
 ln -sf "${AQUI}/webcam_iphone.sh" "$HOME/.local/bin/webcam-iphone"
@@ -239,6 +247,7 @@ EOF
 crear_lanzador "lente-webcam-iphone.desktop" "Webcam iPhone" ""
 crear_lanzador "lente-webcam-iphone-sin-girar.desktop" "Webcam iPhone (sin girar)" " --sin-girar"
 tiene update-desktop-database && update-desktop-database "$HOME/.local/share/applications" 2>/dev/null || true
+fi
 ok "Menu y Escritorio: 'Webcam iPhone' y 'Webcam iPhone (sin girar)'. En terminal: webcam-iphone"
 
 # 4b. Lente para la PC (cliente completo): en el disco de datos, verificado por SHA256
@@ -268,7 +277,9 @@ fi
 # 5. OBS
 if $CON_OBS; then
     paso "OBS Studio"
-    if (tiene flatpak && flatpak list --app --columns=application 2>/dev/null | grep -qx com.obsproject.Studio) || tiene obs; then
+    # All installations (system, user and extra ones like "datos"); into a variable, not grep -q in a pipe
+    APPS_FLATPAK="$(tiene flatpak && flatpak list --app --columns=application 2>/dev/null || true)"
+    if grep -qx com.obsproject.Studio <<<"$APPS_FLATPAK" || tiene obs; then
         ok "OBS ya esta instalado"
     elif tiene flatpak && [[ "$FS_DATOS" =~ ^(ext4|btrfs|xfs|f2fs)$ ]]; then
         # Flatpak de Flathub (el mismo OBS en cualquier distro, con todos los codecs) instalado

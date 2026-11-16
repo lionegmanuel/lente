@@ -8,7 +8,7 @@
 #   webcam_iphone.sh --sin-girar     sin dar vuelta la imagen (iPhone con el cable al otro lado)
 #   webcam_iphone.sh --ventana       muestra una ventana "Lente" en lugar de la webcam virtual
 #                                    (para mirar la camara sin OBS)
-#   webcam_iphone.sh --fps 60        fuerza los cuadros (si no, usa los de OBS; si no los encuentra, 30)
+#   webcam_iphone.sh --fps 60        fuerza los cuadros (si no, los de OBS con un maximo de 30; si no los encuentra, 30)
 #   webcam_iphone.sh --rapido        usa el modo rapido (ffmpeg) aunque este Lente para la PC
 #
 # Con Lente para la PC instalado (lente, tools/linux/instalar.sh lo baja al disco de datos)
@@ -32,6 +32,8 @@ PIDFILE="${ESTADO_DIR}/lente-webcam-iphone.pid"
 DATOS=""
 CONF="${XDG_CONFIG_HOME:-$HOME/.config}/lente/lente.conf"
 [[ -f "$CONF" ]] && . "$CONF"
+# Nothing on the system disk: without lente.conf, the data disk if it is mounted
+[[ -z "$DATOS" ]] && mountpoint -q /mnt/d 2>/dev/null && DATOS="/mnt/d"
 if [[ -n "$DATOS" && -d "$DATOS" ]]; then
     LOGDIR="${DATOS}/Temp/lente"
 else
@@ -39,6 +41,10 @@ else
 fi
 LOG="${LOGDIR}/webcam_iphone.log"
 mkdir -p "$LOGDIR"
+# The log never grows past 1 MB: keep the last 500 lines
+if [[ -f "$LOG" ]] && (( $(stat -c %s "$LOG" 2>/dev/null || echo 0) > 1048576 )); then
+    tail -n 500 "$LOG" > "${LOG}.tmp" && mv -f "${LOG}.tmp" "$LOG"
+fi
 
 GIRAR="--girar"
 VENTANA=false
@@ -130,7 +136,11 @@ if [[ -z "$PYTHON" ]]; then
     avisar "Falta Python 3. Correr tools/linux/instalar.sh"
     exit 1
 fi
-[[ -n "$FPS" ]] || FPS="$(fps_de_obs)"
+# Fewest resources: never more than 30 unless asked with --fps (OBS at 60 just repeats frames)
+if [[ -z "$FPS" ]]; then
+    FPS="$(fps_de_obs)"
+    (( FPS > 30 )) && FPS=30
+fi
 
 ARGS=(--fps "$FPS" --mbps "$MBPS")
 [[ -n "$GIRAR" ]] && ARGS+=("$GIRAR")
@@ -166,7 +176,11 @@ arrancar() {
 MODO="rapido"
 if [[ -n "$LENTE_BIN" ]] && ! $RAPIDO; then
     MODO="completo"
-    CMD=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600 --pause-on-exit=false)
+    # On Linux the client only unbuffers stdout on Windows: to a file it is fully buffered, so
+    # the log stays empty and "App del iPhone:" never shows up. stdbuf makes it line buffered.
+    CMD=()
+    command -v stdbuf >/dev/null 2>&1 && CMD=(stdbuf -oL -eL)
+    CMD+=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600 --pause-on-exit=false)
     [[ -n "$GIRAR" ]] && CMD+=(--capture-orientation=180)
     if $VENTANA; then
         CMD+=(--window-title=Lente)
