@@ -1,6 +1,16 @@
 # Lente · reglas del proyecto
 
-Lente convierte un iPhone en cámara para la PC por cable USB, con la experiencia de scrcpy. Es un fork de scrcpy 4.1 con un backend iOS (`app/src/ios/`) y una app propia para el iPhone (`ios/`). El plan completo está en `docs/plan/`: empezar siempre por `docs/plan/PLAN.md` y `docs/plan/ESTADO.md`.
+Lente convierte un iPhone en cámara para la PC por cable USB, con la experiencia de scrcpy. Es un fork de scrcpy 4.1 con un backend iOS (`app/src/ios/`) y una app propia para el iPhone (`ios/`). El plan completo está en `docs/plan/`: empezar siempre por `UPDATES.md` (raíz del repo) y después `docs/plan/PLAN.md` y `docs/plan/ESTADO.md`.
+
+## 0 · `UPDATES.md`: leer SIEMPRE al iniciar sesión
+
+**Lo primero en cualquier sesión de trabajo en este repo es leer `UPDATES.md`, sea cual sea la tarea.** Es el resumen de las últimas sesiones: qué se hizo, qué se decidió, qué archivos cambiaron, qué falta probar o decidir y en qué computadora se estaba (laptop con Windows o PC con Fedora). Sirve para retomar enseguida sin reconstruir el contexto a mano ni pedírselo a Manuel.
+
+* **Se lee siempre, sin que Manuel lo pida**, al arrancar y antes de cualquier otra acción.
+* **Se escribe o actualiza SOLO cuando Manuel lo pide explícitamente.** Si no lo pide, no se toca: ni se agrega una línea, ni se aprovecha para anotar algo de paso, ni se corrige. El registro técnico de cada tarea sigue yendo a `docs/plan/ESTADO.md`.
+* **Retención por días, no por sesiones:** se guardan siempre los **últimos 3 días**. Al agregar un día nuevo que supere ese total, se borra el día completo más antiguo (por cantidad de días, nunca por una fecha fija).
+* **Cada sección es un único día** (`## AAAA-MM-DD`) y puede tener **sesiones ilimitadas**: nunca truncar, resumir ni fusionar sesiones de un mismo día por volumen. Cada sesión lleva su propio **título corto** (`###`), va en orden cronológico de la más antigua a la más reciente y se separa de la siguiente con `---`.
+* **Cada sesión se entiende sola:** contexto, qué se trabajó y por qué, decisiones, archivos tocados, qué falta (probar, instalar, decidir) y alertas activas (por ejemplo, el vencimiento de Lente y SideStore), para que la próxima sesión, en cualquiera de las dos computadoras, siga solo con esa lectura.
 
 Estas reglas se suman a las de `D:\Documents\MANUEL\DEV\CLAUDE.md` y a las globales de Manuel. Si algo choca, manda este archivo para lo técnico del proyecto.
 
