@@ -20,7 +20,20 @@ final class CameraPermission: ObservableObject {
 struct MainView: View {
     @EnvironmentObject private var server: StreamServer
     @EnvironmentObject private var camera: CameraPermission
+    @Environment(\.scenePhase) private var scenePhase
     @State private var savedBrightness: CGFloat = 0.5
+    @State private var lastTouch = Date()
+
+    /// While streaming, the screen goes black on its own after this long without a touch.
+    /// iOS stops the camera when the iPhone locks, so the screen cannot turn off while
+    /// streaming: black at the minimum brightness is the closest (OLED pixels off).
+    private let autoBlackoutAfter: TimeInterval = 20
+    private let tick = Timer.publish(every: 2, on: .main, in: .common).autoconnect()
+
+    private var isStreaming: Bool {
+        if case .streaming = server.state { return true }
+        return false
+    }
 
     var body: some View {
         ZStack {
@@ -38,9 +51,12 @@ struct MainView: View {
                     Button("Permitir la cámara") { camera.request() }
                         .buttonStyle(.borderedProminent)
                 }
-                if case .streaming = server.state {
+                if isStreaming {
                     Button("Pantalla negra") { server.blackout = true }
                         .buttonStyle(.bordered)
+                    Text("Se pone negra sola a los \(Int(autoBlackoutAfter)) segundos. Doble toque para volver")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                 }
                 Text("Conectá el cable y abrí Lente en la computadora")
                     .font(.footnote)
@@ -59,15 +75,36 @@ struct MainView: View {
             }
         }
         .statusBarHidden(true)
+        .simultaneousGesture(TapGesture().onEnded { lastTouch = Date() })
+        .onReceive(tick) { _ in
+            if isStreaming && !server.blackout && Date().timeIntervalSince(lastTouch) >= autoBlackoutAfter {
+                server.blackout = true
+            }
+        }
+        .onChange(of: isStreaming) { streaming in
+            // Screen on only while streaming; otherwise the iPhone locks with its own settings.
+            UIApplication.shared.isIdleTimerDisabled = streaming
+            lastTouch = Date()
+            if !streaming { server.blackout = false }
+        }
         .onChange(of: server.blackout) { on in
             if on {
                 savedBrightness = UIScreen.main.brightness
                 UIScreen.main.brightness = 0
             } else {
                 UIScreen.main.brightness = savedBrightness
+                lastTouch = Date()
+            }
+        }
+        .onChange(of: scenePhase) { phase in
+            // Never leave the iPhone at the minimum brightness outside Lente.
+            if phase != .active && server.blackout {
+                UIScreen.main.brightness = savedBrightness
+                server.blackout = false
             }
         }
         .onAppear {
+            UIApplication.shared.isIdleTimerDisabled = isStreaming
             server.start()
             if camera.status == .notDetermined { camera.request() }
         }

@@ -15,7 +15,9 @@ struct LenteApp: App {
         .onChange(of: scenePhase) { phase in
             switch phase {
             case .active:
-                UIApplication.shared.isIdleTimerDisabled = true
+                // The screen stays on only while streaming (MainView): waiting for the computer,
+                // the iPhone locks with its own settings, like any other app.
+                UIApplication.shared.isIdleTimerDisabled = false
                 camera.refresh()
                 server.start()
             case .background:
