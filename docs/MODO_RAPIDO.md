@@ -54,6 +54,8 @@ Dos cosas que dan negro en OBS en Windows (pasaron el 2026-11-16): **minimizar l
 
 ### Configuración de OBS para la máxima calidad (laptop, 2026-11-16)
 
+* Control remoto: obs-websocket activado en la laptop (puerto 4455, con contraseña, en `%APPDATA%\obs-studio\plugin_config\obs-websocket\config.json`). Lo usa el agente para ver la imagen que recibe OBS, ajustar fuentes y arrancar grabaciones de prueba sin capturas de pantalla. El aviso del Firewall de Windows se cancela: así solo responde dentro de la laptop. Para tocar la posición o el tamaño de una fuente con OBS 32 se usa el WebSocket, no el JSON: si la fuente ya fue guardada por OBS, `bounds_rel` y `pos_rel` pisan los valores absolutos del archivo (pasó el 2026-11-16 y la cámara quedó invisible).
+
 * Captura de ventana: método **Windows 10 (1903 y posteriores)**, sin capturar el cursor. La fuente va ajustada al lienzo (Transformar › Ajustar a la pantalla, 1920x1080): si la ventana cambia de tamaño, la imagen igual llena el cuadro.
 * Grabación: Salida › modo Avanzado › Grabación › codificador **NVIDIA NVENC H.264**, control de tasa **CQP 16**, preset **P7**, dos pasadas a resolución completa, perfil high. Antes estaba en CBR sin bitrate (2.500 kbps), que ensuciaba cualquier imagen, y el 2026-11-15 en CQP 18 con P5.
 * Video: 1920x1080 a 30 cuadros. El iPhone manda 30 cuadros y 24 Mbps por defecto (`--fps 30 --mbps 24`), igual que graba OBS: a 30 cuadros la cámara junta más luz por cuadro y hay menos ruido adentro de casa.
@@ -128,11 +130,23 @@ Si el disco de datos no está montado, el instalador se frena con un error en lu
 3. Abrir OBS (perfil y escena «Lente iPhone»).
 4. Para apagarla: otro clic en **Webcam iPhone** (o `webcam-iphone --apagar`).
 
-Sigue andando aunque se desenchufe el cable o se cierre Lente en el iPhone: al volver, la imagen vuelve sola. Orden recomendado: primero la cámara y después OBS.
+Sigue andando aunque se desenchufe el cable o se cierre Lente en el iPhone: al volver, la imagen vuelve sola. Orden recomendado: primero la cámara y después OBS. En el iPhone, a los 20 segundos transmitiendo la pantalla se pone negra sola (app 1.0.2): es normal, la imagen sigue llegando.
+
+### Primera grabación en la PC con Fedora (después del test de la laptop del 2026-11-16)
+
+En Windows la prueba final salió perfecta el 2026-11-16: app 1.0.2, 1920x1080 a 30 cuadros, LUT, Boya a 48 kHz y voz sin saturar. Para dejar Fedora igual:
+
+1. 💻 `git pull` en `/mnt/d/Documents/MANUEL/DEV/lente` y en `/mnt/d/Documents/MANUEL/VELINEX` (la plantilla del micrófono y el LUT viven en VELINEX).
+2. 🎙️ Elegir el micrófono: el receptor Boya por el adaptador USB común a USB-C (enchufado y con el transmisor prendido), o el Fifine (sin el receptor enchufado).
+3. 💻 Con OBS cerrado: `python3 "$LENTE/tools/linux/configurar_obs.py" --datos /mnt/d --videos /mnt/d/Videos`. Tiene que decir qué micrófono quedó y con cuántos filtros.
+4. 📱 Lente 1.0.2 abierta en el iPhone, el cable de datos (el de Motorola sirve) en un USB de atrás de la placa. La primera vez en esa PC, desbloquear el iPhone y tocar **Confiar**.
+5. 💻 `bash "$LENTE/tools/linux/verificar.sh"`: tiene que terminar en «Todo bien» y nombrar el micrófono.
+6. 💻 Clic en **Webcam iPhone** y abrir OBS (perfil y escena «Lente iPhone»).
+7. 🎬 Grabar 10 segundos con un aplauso frente a la cámara para medir el desfase entre imagen y sonido; el valor se fija en OBS › Propiedades avanzadas de audio › Sincronización de Mic/Aux y se anota en `VELINEX/Contenido y Marketing/Plantilla Microfono OBS/README.md`. En Fedora el camino es otro que en Windows (webcam virtual), por eso se mide ahí.
 
 **Cuadros por segundo:** 30, igual que en la laptop (decisión de Manuel, 2026-11-15). El perfil «Lente iPhone» viene a 30 y el lanzador lee los cuadros del perfil activo de OBS (de la distro o Flatpak) con un máximo de 30, para gastar lo menos posible (batería y calor del iPhone, procesador de la PC): con un perfil a 60, como `VELINEX_PRO`, el iPhone igual manda 30. Si no los encuentra, usa 30. Para forzar otro valor: `webcam-iphone --fps 60`.
 
-Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--ventana` (muestra una ventana «Lente» para mirar sin OBS), `--estado`, `--apagar`. Variables: `LENTE_V4L2` (otro dispositivo), `LENTE_MBPS` (tasa, 24 por defecto). Registro: `/mnt/d/Temp/lente/webcam_iphone.log`.
+Opciones: `webcam-iphone --help`. Las principales: `--sin-girar`, `--fps N`, `--ventana` (en lugar de la webcam virtual abre una ventana «Lente» con la imagen fija en 1920x1080 y su barra de título, igual que Windows, para «Captura de ventana»; la webcam virtual es mejor: se puede minimizar y gasta menos), `--estado`, `--apagar`. Variables: `LENTE_V4L2` (otro dispositivo), `LENTE_MBPS` (tasa, 24 por defecto). Registro: `/mnt/d/Temp/lente/webcam_iphone.log`.
 
 ### OBS en Linux
 
@@ -144,7 +158,6 @@ El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver
 | Video | 1920x1080 a 30 cuadros |
 | Escena «iPhone» | Fuente **«Webcam iPhone»**: Dispositivo de captura de video (V4L2) en `/dev/video10`, ajustada a toda la pantalla, sin búfer (menos delay) y con reinicio solo si deja de llegar imagen |
 | Color | Filtro **Apply LUT** con `Studio_Cinema_HerasHiguera_kitchen.cube` al 90%, igual que la laptop. Lo busca en el repo VELINEX, primero en el disco de datos (`/mnt/d/Documents/MANUEL/VELINEX/...`) y lo usa desde ahí. Solo si lo encuentra fuera del disco de datos lo copia a la carpeta de OBS (`luts/`) |
-| Audio | Mic/Aux = el micrófono por defecto del sistema (en la PC principal, el Fifine: dejarlo como entrada por defecto en la configuración de sonido) |
 | Micrófono | Si el receptor Boya BY-V está enchufado (en la PC con Fedora, por el adaptador USB común a USB-C), Mic/Aux queda en ese micrófono con los 6 filtros de la plantilla de Velinex, igual que la laptop. Si no está, el micrófono por defecto del sistema (en la PC principal, el Fifine) con los filtros que tiene Mic/Aux en la colección `VELINEX_PRO`. Para cambiar de micrófono: enchufar o desenchufar el receptor y volver a correr `configurar_obs.py` con OBS cerrado (2026-11-16) |
 | Grabación | Máxima calidad, igual que la laptop (2026-11-16). Placa AMD o Intel: **VA-API H.264, CQP 16**. NVIDIA: **NVENC H.264, CQP 16**, preset P7, dos pasadas completas. Sin placa: x264 CRF 16. Formato MP4 híbrido (OBS 30.2 o superior; si no, MKV). Carpeta: `/mnt/d/Videos` (el disco de datos) |
 
@@ -169,6 +182,8 @@ El instalador lo deja hecho con `tools/linux/configurar_obs.py`. Se puede volver
 | Imagen congelada | `webcam-iphone --apagar` y prender de nuevo. Ver `/mnt/d/Temp/lente/webcam_iphone.log`. |
 | «No encuentro el disco de datos montado en /mnt/d» | Montar el HDD (`lsblk -f` para ver el disco; guía en `VELINEX/DEV & INFRAESTRUCTURA IA/Pase de Windows a Linux.md`) y volver a correr `instalar.sh`. Si está montado en otro lado: `instalar.sh --datos /ruta`. |
 | Lente no abre en el iPhone | Pasaron 7 días: renovar en SideStore (sección 1). |
+| Mic/Aux mudo o con otro micrófono | Se desenchufó el receptor Boya o se cambió de micrófono: con OBS cerrado, volver a correr `configurar_obs.py` con el micrófono que se va a usar enchufado. |
+| Un MP4 no abre en Windows («Server execution failed») | No es el video: Windows Media Player quedó trabado en segundo plano. Cerrar `wmplayer.exe` y abrirlo de nuevo, o usar otro reproductor. |
 
 ---
 

@@ -42,3 +42,16 @@ Manuel sigue desde la laptop porque hay tormenta y hoy no usa la PC de escritori
 5. Anotar en `docs/plan/ESTADO.md` lo que ande y lo que falle. Las mediciones van a la tabla de Mediciones.
 
 **Queda para después, en Fedora:** el paso 7 de la prueba final, con el cable nuevo, `verificar.sh` y OBS «Lente iPhone».
+
+---
+
+### Prueba final en la laptop, calidad máxima y app 1.0.2
+
+- **Cable:** el de cargador Motorola USB-A a USB-C pasa datos y el iPhone se ve. El adaptador «OTG» (USB-A macho a USB-C hembra) no sirve para el iPhone (ni siquiera carga), pero sí para el receptor Boya BY-V (48 kHz).
+- **Prueba final en Windows aprobada por Manuel:** app 1.0.2, 1920x1080 a 30 cuadros, LUT al 90%, Boya sin saturar. Detalle en `docs/plan/ESTADO.md`.
+- **Windows:** la ventana «Lente» tiene la imagen fija en 1920x1080 con barra de título en la esquina del monitor principal; se tapa con cualquier ventana y OBS la sigue grabando. Minimizada o maximizada, no (límite de Windows). OBS en CQP 16, P7, dos pasadas; fuente «Webcam iPh» (escena FullCam) con LUT y ajustada al lienzo; obs-websocket activado.
+- **App del iPhone 1.0.2** (release `v1.0.2`): pantalla negra sola a los 20 s transmitiendo, bloqueo normal esperando la computadora. iOS no deja la cámara con el iPhone bloqueado. SideStore renovado hoy con «Refresh All»: vence alrededor del 2026-11-23.
+- **Linux:** `configurar_obs.py` con CQP 16 y micrófono Boya (plantilla) o Fifine (filtros de `VELINEX_PRO`); `--ventana` igual que Windows. Auditado en WSL con el iPhone simulado.
+- **Commits:** del `b11cb817` al de esta entrada, todo en `main`.
+
+**Para retomar en Fedora:** seguir «Primera grabación en la PC con Fedora» de `docs/MODO_RAPIDO.md` (7 pasos: pull de los dos repos, elegir micrófono, `configurar_obs.py`, iPhone con Confiar, `verificar.sh`, Webcam iPhone y OBS, aplauso para el desfase).

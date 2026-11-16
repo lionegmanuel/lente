@@ -145,6 +145,7 @@ fi
 ARGS=(--fps "$FPS" --mbps "$MBPS")
 [[ -n "$GIRAR" ]] && ARGS+=("$GIRAR")
 if $VENTANA; then
+    ARGS+=(--fija 0 0)
     DESTINO="ventana Lente"
 else
     if [[ ! -e "$DISPOSITIVO" ]]; then
@@ -183,7 +184,9 @@ if [[ -n "$LENTE_BIN" ]] && ! $RAPIDO; then
     CMD+=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600 --pause-on-exit=false)
     [[ -n "$GIRAR" ]] && CMD+=(--capture-orientation=180)
     if $VENTANA; then
-        CMD+=(--window-title=Lente)
+        # Igual que Windows (2026-11-16): imagen fija en 1920x1080 con barra de titulo, para que
+        # "Captura de ventana" grabe 1080p sin importar el tamano de la pantalla
+        CMD+=(--window-title=Lente --window-width=1920 --window-height=1080)
     else
         CMD+=(--v4l2-sink="$DISPOSITIVO" --no-playback --no-window)
     fi
