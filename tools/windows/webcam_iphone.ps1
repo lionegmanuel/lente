@@ -7,35 +7,28 @@
 #
 #   powershell -WindowStyle Hidden -ExecutionPolicy Bypass -File webcam_iphone.ps1 [-SinGirar] [-Rapido] [-VentanaLibre]
 #
-# Ventana fija de 1920x1080 sin bordes y fuera de la vista (cambio del 2026-11-16): OBS captura la
-# ventana al tamano que tiene, asi que con este tamano graba siempre 1080p pixel a pixel, con uno,
-# dos o los monitores que sean y de cualquier resolucion. La ventana queda a la izquierda de todo
-# el escritorio (sea cual sea al abrirla), no ocupa ninguna pantalla y OBS la sigue capturando
-# (probado). Se ve en la vista previa de OBS; Alt+Tab la enfoca para los atajos. Nunca minimizarla:
-# Windows deja de dibujar las ventanas minimizadas y OBS recibe negro.
-# -Visible la abre en la esquina del monitor principal (mismo tamano); -VentanaLibre, la ventana comun.
+# Ventana fija de 1920x1080 sin bordes (cambio del 2026-11-16, como scrcpy pero con la resolucion
+# fija): OBS captura la ventana al tamano que tiene, asi que con este tamano graba siempre 1080p
+# pixel a pixel, sin importar el tamano ni la cantidad de monitores (si la pantalla es mas chica,
+# lo que sobra queda afuera y OBS igual graba el cuadro entero). Se abre en la esquina del monitor
+# principal y se usa la compu normal con otras ventanas por encima: OBS la sigue capturando tapada.
+# Nunca minimizarla: Windows deja de dibujar las ventanas minimizadas y OBS recibe negro. Afuera de
+# todas las pantallas tampoco: OBS no la lista ni puede empezar a capturarla (probado).
+# -VentanaLibre vuelve a la ventana comun de antes, que cambia de tamano.
 param(
     [switch]$SinGirar,
     [switch]$Rapido,
     [switch]$VentanaLibre,
-    [switch]$Visible,
     [int]$Fps = 30,
     [int]$Mbps = 24
 )
 
-# Esquina de la ventana fija: a la izquierda de todo el escritorio virtual, medido al abrirla
+# Esquina de la ventana fija: la del monitor principal, medido al abrirla
 $posicion = $null
 if (-not $VentanaLibre) {
     Add-Type -AssemblyName System.Windows.Forms
-    if ($Visible) {
-        $principal = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
-        $posicion = @($principal.X, $principal.Y)
-    } else {
-        $escritorio = [System.Windows.Forms.SystemInformation]::VirtualScreen
-        # 1 pixel adentro del escritorio: Windows no deja empezar a capturar (WGC) una ventana que
-        # nace afuera de todas las pantallas (OBS: winrt_capture_init 0x80070057, 2026-11-16)
-        $posicion = @(($escritorio.Left - 1919), $escritorio.Top)
-    }
+    $principal = [System.Windows.Forms.Screen]::PrimaryScreen.Bounds
+    $posicion = @($principal.X, $principal.Y)
 }
 
 $tools = Split-Path -Parent $PSScriptRoot
