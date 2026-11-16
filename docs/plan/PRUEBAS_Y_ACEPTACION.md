@@ -95,7 +95,7 @@ Grabar un video real de prueba (2 minutos) en la laptop y en Fedora con el flujo
 
 Manuel pidió una sola prueba al final en lugar de una por fase. Unos 20 minutos, con el iPhone. Cada paso dice dónde se hace (📱 iPhone, 💻 PC).
 
-1. 📱 Actualizar la app a **1.0.0**: LocalDevVPN conectada, Safari › `github.com/lionegmanuel/lente/releases` › `Lente-v1.0.0.ipa` › SideStore › My Apps › «+». Opcional: en SideStore › Sources › «+», agregar `https://raw.githubusercontent.com/lionegmanuel/lente/main/sidestore-source.json` (desde ahí las actualizaciones son «Update»).
+1. 📱 Actualizar la app a la última (**1.0.2** desde el 2026-11-16): LocalDevVPN conectada, Safari › `github.com/lionegmanuel/lente/releases` › `Lente-v1.0.2.ipa` › SideStore › My Apps › «+». Opcional: en SideStore › Sources › «+», agregar `https://raw.githubusercontent.com/lionegmanuel/lente/main/sidestore-source.json` (desde ahí las actualizaciones son «Update»).
 2. 💻 Windows (laptop): `powershell -ExecutionPolicy Bypass -File D:\Documents\MANUEL\DEV\lente\tools\windows\instalar.ps1`. Tiene que bajar Lente para la PC y crear los tres accesos directos.
 3. 📱 Lente abierta y el cable conectado. 💻 Doble clic en **Webcam iPhone**: se abre la ventana «Lente» con la imagen derecha. El título muestra cuadros por segundo, Mbps, temperatura y batería.
 4. 💻 Con la ventana «Lente» enfocada, probar y anotar OK o falla: Alt+T y Alt+Shift+T (linterna), Alt+Arriba y Alt+Abajo (zoom), Alt+L (lente 0,5x, 1x, 5x), Alt+Shift+L (frontal), Alt+E, Alt+A, Alt+Y (bloqueos; el registro dice «bloqueado» o «automático»), Alt+O y Alt+Shift+O (pantalla del iPhone en negro y de vuelta; también doble toque en el iPhone), Alt+Shift+R (reinicio del video).

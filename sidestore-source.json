@@ -15,6 +15,15 @@
       "category": "utilities",
       "versions": [
         {
+          "version": "1.0.2",
+          "buildVersion": "5",
+          "date": "2026-11-16",
+          "localizedDescription": "Pantalla negra sola a los 20 segundos transmitiendo y bloqueo normal esperando la computadora; menos calor y bateria.",
+          "downloadURL": "https://github.com/lionegmanuel/lente/releases/download/v1.0.2/Lente-v1.0.2.ipa",
+          "size": 147998,
+          "minOSVersion": "16.0"
+        },
+        {
           "version": "1.0.0",
           "buildVersion": "4",
           "date": "2026-11-15",
