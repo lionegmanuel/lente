@@ -63,7 +63,7 @@ if [[ -n "$OBS_CFG" ]]; then
     bien "OBS: perfil y escena 'Lente iPhone' ($(sed -n 's/^FPSCommon=//p' "$OBS_CFG/basic/profiles/Lente_iPhone/basic.ini") cuadros, $(sed -n 's/^RecEncoder=//p' "$OBS_CFG/basic/profiles/Lente_iPhone/basic.ini"))"
     if grep -qh '^ProfileDir=Lente_iPhone' "$OBS_CFG/user.ini" "$OBS_CFG/global.ini" 2>/dev/null; then bien "OBS abre con 'Lente iPhone'"; else nota "OBS abre con otro perfil: elegir 'Lente iPhone' en los menus Perfil y Coleccion de escenas"; fi
     if grep -q '"clut_filter"' "$OBS_CFG/basic/scenes/Lente_iPhone.json"; then bien "OBS: filtro LUT en la camara"; else nota "OBS sin LUT: agregarlo a mano (docs/MODO_RAPIDO.md)"; fi
-    if grep -qiE '"device_id": "[^"]*(by-v|by_v|boya)' "$OBS_CFG/basic/scenes/Lente_iPhone.json"; then bien "OBS: microfono Boya BY-V"; else bien "OBS: microfono por defecto (Fifine)"; fi
+    if grep -qiE '"device_id": "[^"]*(by-v|by_v|boya)' "$OBS_CFG/basic/scenes/Lente_iPhone.json"; then bien "OBS: microfono Boya BY-V"; else bien "OBS: microfono $(grep -m1 -oP '"device_id": "\K[^"]+' "$OBS_CFG/basic/scenes/Lente_iPhone.json" || echo 'por defecto')"; fi
     if grep -q '"noise_suppress_filter"' "$OBS_CFG/basic/scenes/Lente_iPhone.json"; then bien "OBS: microfono con sus filtros"; else nota "OBS: microfono sin filtros. Con OBS cerrado, python3 \"${AQUI}/configurar_obs.py\" (Boya enchufado o coleccion VELINEX_PRO con el Fifine)"; fi
 else
     mal "OBS sin el perfil 'Lente iPhone': con OBS cerrado, python3 \"${AQUI}/configurar_obs.py\""

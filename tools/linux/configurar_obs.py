@@ -9,8 +9,9 @@ los perfiles ni las escenas que ya existan:
     al 90% si encuentra el LUT (Studio_Cinema_HerasHiguera_kitchen.cube).
   * Mic/Aux: si esta enchufado el receptor Boya BY-V, ese microfono con los 6 filtros de la
     plantilla de Velinex (Contenido y Marketing/Plantilla Microfono OBS, la misma de la
-    laptop con Windows); si no, el microfono por defecto del sistema (en la PC principal, el
-    Fifine) con los filtros de Mic/Aux de la coleccion VELINEX_PRO, si existe.
+    laptop con Windows); si no, el Mic/Aux de la coleccion VELINEX_PRO tal cual (en la PC
+    principal, "Fifine Voz" de PipeWire en mono con sus filtros) o, si no existe, el microfono
+    por defecto del sistema.
   * Grabacion con la placa, a la maxima calidad (2026-11-16, igual que OBS en la laptop):
     AMD o Intel VA-API H.264 CQP 16; NVIDIA NVENC H.264 CQP 16, preset p7 y dos pasadas
     completas; sin placa, x264 CRF 16. Carpeta: /mnt/d/Videos si existe el disco de datos, si no ~/Videos.
@@ -138,19 +139,24 @@ def buscar_plantilla_mic(datos: str | None) -> dict | None:
     return None
 
 
-def filtros_mic_existentes(base: Path) -> list:
-    """Filtros de Mic/Aux de la coleccion VELINEX_PRO (el Fifine de la PC principal), copiados tal cual."""
+def mic_existente(base: Path) -> dict:
+    """Mic/Aux de la coleccion VELINEX_PRO (el Fifine de la PC principal): dispositivo (por ejemplo
+    "fifine_voz", el Fifine con el corte de graves de PipeWire), mono, volumen, desfase y filtros,
+    copiados tal cual. Vacio si no existe."""
     archivo = base / "basic/scenes" / f"{COLECCION_FIFINE}.json"
     try:
-        datos = json.loads(archivo.read_text(encoding="utf-8"))
+        mic = json.loads(archivo.read_text(encoding="utf-8")).get("AuxAudioDevice1") or {}
     except (OSError, ValueError):
-        return []
+        return {}
+    if not mic:
+        return {}
     filtros = []
-    for f in (datos.get("AuxAudioDevice1") or {}).get("filters", []):
+    for f in mic.get("filters", []):
         copia = json.loads(json.dumps(f))
         copia["uuid"] = str(uuid.uuid4())
         filtros.append(copia)
-    return filtros
+    return {"device_id": (mic.get("settings") or {}).get("device_id", "default"), "filtros": filtros,
+            "flags": mic.get("flags", 0), "volume": mic.get("volume", 1.0), "sync": mic.get("sync", 0)}
 
 
 def mic_boya() -> str | None:
@@ -193,7 +199,7 @@ def fuente(nombre: str, id_: str, ajustes: dict, filtros: list | None = None, mi
 
 
 def coleccion(dispositivo: str, lut: str | None, mic_dispositivo: str = "default",
-              plantilla_mic: dict | None = None, filtros_defecto: list | None = None) -> dict:
+              plantilla_mic: dict | None = None, mic_defecto: dict | None = None) -> dict:
     filtros = []
     if lut:
         filtro = fuente("Apply LUT", "clut_filter", {"image_path": lut, "clut_amount": 0.9, "passthrough_alpha": False})
@@ -216,11 +222,14 @@ def coleccion(dispositivo: str, lut: str | None, mic_dispositivo: str = "default
         filtro = fuente(f["name"], f["id"], f["settings"], mixers=255)
         filtro["versioned_id"] = f.get("versioned_id", f["id"])
         filtros_mic.append(filtro)
-    if not plantilla_mic and filtros_defecto:
-        filtros_mic = filtros_defecto
+    if not plantilla_mic and mic_defecto:
+        filtros_mic = mic_defecto["filtros"]
+        mic_dispositivo = mic_defecto["device_id"]
     mic = fuente("Mic/Aux", "pulse_input_capture", {"device_id": mic_dispositivo}, filtros_mic, mixers=255)
     if plantilla_mic:
         mic["volume"] = float(plantilla_mic.get("volumen_fuente", 1.0))
+    elif mic_defecto:
+        mic.update(flags=mic_defecto["flags"], volume=mic_defecto["volume"], sync=mic_defecto["sync"])
     return {
         "AuxAudioDevice1": mic,
         "current_scene": "iPhone", "current_program_scene": "iPhone",
@@ -281,10 +290,10 @@ def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str
     elif boya:
         decir(f"Mic/Aux: Boya BY-V ({boya}), sin filtros: no encontre la plantilla del repo VELINEX")
     else:
-        filtros_defecto = filtros_mic_existentes(base)
-        if filtros_defecto:
-            decir(f"Mic/Aux: microfono por defecto (el Fifine) con los {len(filtros_defecto)} filtros de "
-                  f"Mic/Aux de '{COLECCION_FIFINE}'. Para el Boya: enchufar el receptor y volver a correr")
+        defecto = mic_existente(base)
+        if defecto:
+            decir(f"Mic/Aux: el de '{COLECCION_FIFINE}' ({defecto['device_id']}, {len(defecto['filtros'])} filtros"
+                  f"{', mono' if defecto['flags'] & 1 else ''}). Para el Boya: enchufar el receptor y volver a correr")
         else:
             decir(f"Mic/Aux: microfono por defecto, sin filtros (no hay coleccion '{COLECCION_FIFINE}'). "
                   "Para el Boya: enchufar el receptor y volver a correr")
@@ -295,7 +304,7 @@ def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str
     (perfil_dir / "recordEncoder.json").write_text(json.dumps(enc_ajustes, indent=4), encoding="utf-8")
     escenas.parent.mkdir(parents=True, exist_ok=True)
     datos_escenas = coleccion(a.dispositivo, lut, boya or "default", plantilla_mic if boya else None,
-                              None if boya else filtros_mic_existentes(base))
+                              None if boya else mic_existente(base))
     escenas.write_text(json.dumps(datos_escenas, indent=4, ensure_ascii=False), encoding="utf-8")
     activo = {"Profile": NOMBRE, "ProfileDir": CARPETA, "SceneCollection": NOMBRE, "SceneCollectionFile": f"{CARPETA}.json"}
     # OBS 31 o superior usa user.ini; los anteriores, global.ini. Se escriben los dos.
