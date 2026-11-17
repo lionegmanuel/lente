@@ -17,7 +17,10 @@
 #   webcam_iphone.sh --apagar        apaga
 #   webcam_iphone.sh --estado        dice si esta prendida
 #
-# Variables: LENTE_V4L2 (por defecto /dev/video10), LENTE_MBPS (24).
+# Variables: LENTE_V4L2 (por defecto /dev/video10), LENTE_MBPS (40 en el modo completo, 24 en
+# el rapido), LENTE_CODEC (h265; h264 para volver al anterior), LENTE_BLOQUEO (exposure,wb: la
+# exposicion y el balance de blancos quedan fijos al arrancar, para que el LUT de OBS calce
+# siempre; vacio para dejarlos automaticos).
 # Registro: <disco de datos>/Temp/lente/webcam_iphone.log (o ~/.cache/lente si no hay disco de datos)
 
 set -uo pipefail
@@ -26,6 +29,11 @@ AQUI="$(cd "$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")" && pwd)"
 TOOLS="$(cd "${AQUI}/.." && pwd)"
 DISPOSITIVO="${LENTE_V4L2:-/dev/video10}"
 MBPS="${LENTE_MBPS:-24}"
+# Calidad maxima del modo completo (medido el 2026-11-17 en Fedora con el iPhone 15 Pro Max:
+# H.265 a 40 Mbps, 30 cuadros estables por el cable USB 2.0)
+MBPS_COMPLETO="${LENTE_MBPS:-40}"
+CODEC="${LENTE_CODEC:-h265}"
+BLOQUEO="${LENTE_BLOQUEO-exposure,wb}"
 ESTADO_DIR="${XDG_RUNTIME_DIR:-/tmp}"
 PIDFILE="${ESTADO_DIR}/lente-webcam-iphone.pid"
 # Registros en el disco de datos (lo dejo instalar.sh en ~/.config/lente/lente.conf)
@@ -181,7 +189,9 @@ if [[ -n "$LENTE_BIN" ]] && ! $RAPIDO; then
     # the log stays empty and "App del iPhone:" never shows up. stdbuf makes it line buffered.
     CMD=()
     command -v stdbuf >/dev/null 2>&1 && CMD=(stdbuf -oL -eL)
-    CMD+=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-bit-rate="${MBPS}M" --ios-reconnect=3600 --pause-on-exit=false)
+    CMD+=("$LENTE_BIN" --ios --camera-fps="$FPS" --video-codec="$CODEC" --video-bit-rate="${MBPS_COMPLETO}M"
+          --ios-reconnect=3600 --pause-on-exit=false)
+    [[ -n "$BLOQUEO" ]] && CMD+=(--camera-lock="$BLOQUEO")
     [[ -n "$GIRAR" ]] && CMD+=(--capture-orientation=180)
     if $VENTANA; then
         # Igual que Windows (2026-11-16): imagen fija en 1920x1080 con barra de titulo, para que

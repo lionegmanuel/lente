@@ -6,7 +6,8 @@ los perfiles ni las escenas que ya existan:
   * Video 1920x1080 a 30 cuadros (lo que manda el iPhone).
   * Escena "iPhone" con la fuente "Webcam iPhone" (V4L2, /dev/video10), ajustada a toda
     la pantalla, sin bufer y con reinicio solo si deja de llegar imagen. Filtro Apply LUT
-    al 90% si encuentra el LUT (Studio_Cinema_HerasHiguera_kitchen.cube).
+    al 90% si encuentra el LUT (Studio_Cinema_HerasHiguera_<lugar>.cube, por defecto el de
+    la habitacion de la PC, "room"; si no, el del living, "kitchen").
   * Mic/Aux: si esta enchufado el receptor Boya BY-V, ese microfono con los 6 filtros de la
     plantilla de Velinex (Contenido y Marketing/Plantilla Microfono OBS, la misma de la
     laptop con Windows); si no, el Mic/Aux de la coleccion VELINEX_PRO tal cual (en la PC
@@ -34,7 +35,10 @@ from pathlib import Path
 
 NOMBRE = "Lente iPhone"
 CARPETA = "Lente_iPhone"
-LUT_NOMBRE = "Studio_Cinema_HerasHiguera_kitchen.cube"
+LUT_LOOK = "Studio_Cinema_HerasHiguera"
+# Los LUT van por lugar de grabacion (VELINEX/.../LUTs/README.md): "room" es la habitacion de la PC
+# principal (calibrado el 2026-11-17 con el iPhone en su lugar); "kitchen", el living de la laptop.
+LUGARES = ("room", "kitchen")
 PLANTILLA_MIC = "Contenido y Marketing/Plantilla Microfono OBS/plantilla_mic_boya_byv.json"
 COLECCION_FIFINE = "VELINEX_PRO"  # coleccion de la PC principal: el Fifine en Mic/Aux con sus filtros
 FLATPAK_ID = "com.obsproject.Studio"
@@ -102,15 +106,25 @@ def placa() -> str:
     return tipo
 
 
-def buscar_lut(datos: str | None) -> str | None:
-    """El LUT vive en el repo VELINEX; se busca donde suele estar montado, sin recorrer todo el disco."""
-    cola = f"Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/kitchen/{LUT_NOMBRE}"
+def buscar_lut(datos: str | None, lugar: str = LUGARES[0]) -> str | None:
+    """El LUT vive en el repo VELINEX; se busca donde suele estar montado, sin recorrer todo el disco.
+    Primero el del lugar pedido y, si no existe, el de los otros lugares."""
+    for l in (lugar,) + tuple(x for x in LUGARES if x != lugar):
+        encontrado = buscar_lut_lugar(datos, l)
+        if encontrado:
+            return encontrado
+    return None
+
+
+def buscar_lut_lugar(datos: str | None, lugar: str) -> str | None:
+    nombre = f"{LUT_LOOK}_{lugar}.cube"
+    cola = f"Contenido y Marketing/Scrcpy - Webcam Celular/LUTs/{lugar}/{nombre}"
     casa = str(Path.home())
     patrones = [f"{datos}/Documents/MANUEL/VELINEX/{cola}"] if datos else []
     patrones += [f"/mnt/*/Documents/MANUEL/VELINEX/{cola}", f"/run/media/*/*/Documents/MANUEL/VELINEX/{cola}",
                 f"/media/*/*/Documents/MANUEL/VELINEX/{cola}", f"{casa}/Documents/MANUEL/VELINEX/{cola}",
                 f"{casa}/*/Documents/MANUEL/VELINEX/{cola}", f"{casa}/VELINEX/{cola}", f"{casa}/*/VELINEX/{cola}",
-                f"{casa}/.var/app/{FLATPAK_ID}/config/obs-studio/luts/{LUT_NOMBRE}"]
+                f"{casa}/.var/app/{FLATPAK_ID}/config/obs-studio/luts/{nombre}"]
     for patron in patrones:
         for c in sorted(glob.glob(patron)):
             if os.path.isfile(c):
@@ -276,7 +290,7 @@ def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str
     poner(ini, "Output", {"Mode": "Advanced"})
     poner(ini, "AdvOut", {"RecType": "Standard", "RecEncoder": enc, "RecFilePath": str(videos),
                           "RecFormat2": formato, "RecTracks": 1, "RecAudioEncoder": "ffmpeg_aac",
-                          "TrackIndex": 1, "Encoder": "obs_x264"})
+                          "TrackIndex": 1, "Encoder": "obs_x264", "Track1Bitrate": 320})
     escenas = base / "basic/scenes" / f"{CARPETA}.json"
     usuario = base / "user.ini"
     globales = base / "global.ini"
@@ -322,6 +336,7 @@ def main() -> None:
     ap.add_argument("--lut")
     ap.add_argument("--videos")
     ap.add_argument("--datos", help="disco de datos (HDD): si el LUT esta ahi, OBS lo usa sin copiarlo")
+    ap.add_argument("--lugar", default=LUGARES[0], help="LUT del lugar de grabacion: room (PC, por defecto) o kitchen")
     ap.add_argument("--fps", type=int, default=30)
     ap.add_argument("--dispositivo", default=os.environ.get("LENTE_V4L2", "/dev/video10"))
     ap.add_argument("--placa", choices=["amd", "nvidia", "intel", "otra"])
@@ -335,7 +350,7 @@ def main() -> None:
     if obs_abierto() and not a.simular:
         print("OBS esta abierto: cerrarlo y volver a correr (OBS pisa la configuracion al cerrarse).")
         sys.exit(1)
-    lut = a.lut or buscar_lut(a.datos)
+    lut = a.lut or buscar_lut(a.datos, a.lugar)
     videos = Path(a.videos) if a.videos else carpeta_videos()
     tipo_placa = a.placa or placa()
     enc, enc_ajustes = codificador(tipo_placa)
@@ -347,7 +362,7 @@ def main() -> None:
         en_datos = bool(lut and a.datos and str(Path(lut).resolve()).startswith(str(Path(a.datos).resolve()).rstrip("/") + "/"))
         if lut and not a.simular and not en_datos:
             # Copia del LUT junto a la configuracion: OBS lo encuentra aunque el disco de datos no este montado
-            destino = base / "luts" / LUT_NOMBRE
+            destino = base / "luts" / Path(lut).name
             destino.parent.mkdir(parents=True, exist_ok=True)
             if Path(lut).resolve() != destino.resolve():
                 shutil.copyfile(lut, destino)
