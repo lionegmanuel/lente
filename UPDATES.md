@@ -55,3 +55,24 @@ Manuel sigue desde la laptop porque hay tormenta y hoy no usa la PC de escritori
 - **Commits:** del `b11cb817` al de esta entrada, todo en `main`.
 
 **Para retomar en Fedora:** seguir «Primera grabación en la PC con Fedora» de `docs/MODO_RAPIDO.md` (7 pasos: pull de los dos repos, elegir micrófono, `configurar_obs.py`, iPhone con Confiar, `verificar.sh`, Webcam iPhone y OBS, aplauso para el desfase).
+
+## 2026-11-18
+
+### Lente en la laptop con Linux: se replica la PC sin cambios (laptop con Windows)
+
+- **Contexto:** el `git pull` trajo los commits del 2026-11-17 hechos en la PC con Fedora (`751abaac` y `90c16831`): iPhone real en verde, H.265 a 40 Mbps con exposición y balance fijos, LUT `HerasHiguera_room`, audio a 320 kbps y `configurar_obs.py` sin pisar el micrófono de `VELINEX_PRO`. En la PC la app quedó funcionando y probada con video grabado.
+- **Pedido de Manuel:** que la laptop (Acer Nitro AN515-57: i5-11400H, Intel UHD + GTX 1650, SSD de 256 GB y HDD de 1 TB) funcione en Linux igual que la PC, sin diferencias ni decisiones propias del agente.
+- **Qué se hizo:** se revisó el plan de la laptop en la migración única (`D:\Temp\migracion-master\v08\LEEME_VERTICAL.md`): se formatean los dos discos, Fedora 44 KDE en el SSD, el HDD en ext4 «Datos» montado en `/mnt/d` (igual que la PC) y `OPTIMIZAR_FEDORA.sh` instala el driver de NVIDIA con la llave MOK. Con eso, el código actual de Lente (commit `90c16831`) ya cubre la laptop: simulado en WSL con la Intel y la GTX 1650 con su driver, `configurar_obs.py` deja OBS en NVENC H.264 CQP 16, P7 y dos pasadas (lo mismo que OBS en Windows) con el mismo perfil, LUT, 30 cuadros y `/mnt/d/Videos` que la PC, e `instalar.sh` instala lo mismo que en la PC. Un intento previo de adaptar los scripts (D: en NTFS, Intel por defecto, LUT `kitchen`) se descartó y se deshizo entero: no quedó nada de eso.
+- **Decisiones de Manuel:** no tocar nada de la PC con Fedora (queda completa) ni de Windows (se sigue trabajando ahí hasta formatear la laptop y pasar todo a Linux).
+- **Archivos tocados:** solo este `UPDATES.md`.
+- **Dato a tener en cuenta:** la vertical 08 dice «OBS del RPM (no el Flatpak)» para la laptop, y en la PC está el Flatpak. A Lente le da igual: `instalar.sh` ve que OBS ya está instalado y lo configura.
+
+**Para retomar en la laptop, después de la migración (vertical 08):**
+
+1. 💻 `git pull` de `lente` y `VELINEX` en `/mnt/d/Documents/MANUEL/`.
+2. 💻 `bash /mnt/d/Documents/MANUEL/DEV/lente/tools/linux/instalar.sh`; reiniciar o cerrar sesión si lo pide.
+3. 📱 Lente abierta en el iPhone y el cable. La primera vez en esa computadora, tocar **Confiar**.
+4. 💻 `bash /mnt/d/Documents/MANUEL/DEV/lente/tools/linux/verificar.sh` tiene que terminar en «Todo bien».
+5. 🎬 Clic en **Webcam iPhone**, abrir OBS y grabar con un aplauso para medir el desfase.
+
+**Alerta activa:** Lente y SideStore se renovaron el 2026-11-16 y vencen alrededor del 2026-11-23. Renovar antes en SideStore (Refresh All, con LocalDevVPN conectada).
