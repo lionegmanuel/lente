@@ -279,7 +279,9 @@ def poner(cp: configparser.ConfigParser, seccion: str, valores: dict) -> None:
 def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str, enc_ajustes: dict,
                boya: str | None = None, plantilla_mic: dict | None = None) -> None:
     version = version_obs(tipo)
-    formato = "hybrid_mp4" if version >= (30, 2) else "mkv"
+    # 19/11/2026 · estándar de audio del BOYA: el audio se graba SIN PÉRDIDA (PCM de 24 bits). Hybrid MOV desde OBS 31;
+    # antes, MKV (también acepta PCM). Nunca hybrid_mp4 con AAC: corta arriba de 18 kHz y empasta las consonantes.
+    formato = "hybrid_mov" if version >= (31, 0) else "mkv"
     perfil_dir = base / "basic/profiles" / CARPETA
     ini = leer_ini(perfil_dir / "basic.ini")
     poner(ini, "General", {"Name": NOMBRE})
@@ -289,7 +291,7 @@ def configurar(base: Path, tipo: str, a, lut: str | None, videos: Path, enc: str
     poner(ini, "Audio", {"SampleRate": 48000, "ChannelSetup": "Stereo"})
     poner(ini, "Output", {"Mode": "Advanced"})
     poner(ini, "AdvOut", {"RecType": "Standard", "RecEncoder": enc, "RecFilePath": str(videos),
-                          "RecFormat2": formato, "RecTracks": 1, "RecAudioEncoder": "ffmpeg_aac",
+                          "RecFormat2": formato, "RecTracks": 1, "RecAudioEncoder": "ffmpeg_pcm_s24le",
                           "TrackIndex": 1, "Encoder": "obs_x264", "Track1Bitrate": 320})
     escenas = base / "basic/scenes" / f"{CARPETA}.json"
     usuario = base / "user.ini"
